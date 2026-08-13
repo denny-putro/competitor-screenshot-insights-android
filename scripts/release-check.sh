@@ -33,16 +33,4 @@ then
   exit 1
 fi
 
-for executable in \
-  "$REPO_ROOT/scripts/release-check.sh" \
-  "$SKILL_ROOT/scripts/preflight.sh" \
-  "$SKILL_ROOT/scripts/setup.sh" \
-  "$SKILL_ROOT/scripts/open-mapped-app.sh"
-do
-  if [ ! -x "$executable" ]; then
-    printf 'Expected executable bit: %s\n' "$executable" >&2
-    exit 1
-  fi
-done
-
-printf '%s\n' 'PASS: release files, privacy scan, and executable contract'
+printf '%s\n' 'PASS: release files, privacy scan, and entrypoint contract'

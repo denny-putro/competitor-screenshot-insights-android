@@ -27,6 +27,12 @@ AGENT_DEVICE_RAW_BIN=${AGENT_DEVICE_RAW_BIN:-"${AGENT_DEVICE_BIN:-}/agent-device
 AGENT_DEVICE_PLATFORM=${AGENT_DEVICE_PLATFORM:-ios}
 AGENT_DEVICE_SESSION=${AGENT_DEVICE_SESSION:-phone-main}
 
+# GitHub archive downloads do not preserve executable bits. Repair only the
+# bundled command guard; all public shell entrypoints are invoked with `sh`.
+if [ -f "$AGENT_DEVICE_GUARD_BIN/agent-device" ] && [ ! -x "$AGENT_DEVICE_GUARD_BIN/agent-device" ]; then
+  chmod u+x "$AGENT_DEVICE_GUARD_BIN/agent-device" 2>/dev/null || true
+fi
+
 for CSI_PATH_ENTRY in \
   "$AGENT_DEVICE_GUARD_BIN" \
   "${AGENT_DEVICE_NODE_BIN:-}" \

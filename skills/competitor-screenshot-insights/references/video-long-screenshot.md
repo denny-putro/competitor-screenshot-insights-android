@@ -7,7 +7,7 @@ Use this fast path only after `long-screenshot.md` selects it. Record controlled
 After the foreground-app visual gate has passed and the intended container is at the top, run the continuous pipeline:
 
 ```bash
-scripts/capture-long-fast.sh \
+sh scripts/capture-long-fast.sh \
   --expected-bundle com.example.app \
   --before-screenshot /absolute/path/target-before.png \
   --work-dir /absolute/path/detail-full.fast-run \
@@ -29,10 +29,10 @@ The remaining sections describe the internal contract and the manual fallback. D
 ## Record controlled positions
 
 1. Create task-specific paths for the video, extracted candidates, and accepted `segment-NNN.png` files.
-2. At the top of the page, use one semantic snapshot when needed to obtain the total scrollable content height and the container's visible height. Choose the planned per-gesture scroll distance, then calculate the number of gestures with `scripts/plan-scroll-count.sh`:
+2. At the top of the page, use one semantic snapshot when needed to obtain the total scrollable content height and the container's visible height. Choose the planned per-gesture scroll distance, then calculate the number of gestures with `sh scripts/plan-scroll-count.sh`:
 
    ```bash
-   scripts/plan-scroll-count.sh \
+   sh scripts/plan-scroll-count.sh \
      --content-height 4075 \
      --visible-height 844 \
      --scroll-distance 400 \
@@ -43,7 +43,7 @@ The remaining sections describe the internal contract and the manual fallback. D
 3. Finish all setup and verification before recording. Run the planned gestures as one bounded recording batch:
 
    ```bash
-   scripts/record-scroll-batch.sh \
+   sh scripts/record-scroll-batch.sh \
      --output /absolute/path/scroll.mp4 \
      --count 9 \
      --x 195 --y 650 --dx 0 --dy -400 \
@@ -62,7 +62,7 @@ The remaining sections describe the internal contract and the manual fallback. D
 Never seek fixed times such as `1.5s`, assume constant FPS, or select a fixed frame number after each gesture. Run the bundled extractor after recording has stopped:
 
 ```bash
-scripts/extract-scroll-frames.sh \
+sh scripts/extract-scroll-frames.sh \
   --video /absolute/path/scroll.mp4 \
   --telemetry /absolute/path/scroll.gesture-telemetry.json \
   --output-dir /absolute/path/probes \
@@ -83,7 +83,7 @@ It reads actual decoded presentation timestamps, builds each settled interval fr
 
 Treat every selected video frame as a provisional probe:
 
-1. Run `scripts/validate-probe.sh --mode <fast|verified>` against the last accepted segment with crops that exclude fixed chrome when practical.
+1. Run `sh scripts/validate-probe.sh --mode <fast|verified>` against the last accepted segment with crops that exclude fixed chrome when practical.
 2. Accept and number the frame on exit `0`, including fast warnings, after confirming the correct page/container. On exit `11`, recapture the position or use the still-frame fallback. On exit `10`, exclude it; a no-progress safety frame normally confirms the bottom.
 3. In fast mode, do not tune around moving local elements or low-confidence-but-usable overlap. If no minimally usable frame exists, make one targeted still recapture when recoverable; otherwise use the still-frame fallback. Verified mode retains the stricter cluster search and seam requirements.
 4. Stop adding frames as soon as semantic bottom evidence and the accepted visual sequence agree. Discard repeated terminal clusters and all no-progress probes.
@@ -94,7 +94,7 @@ Semantic height can overestimate the real page. When at least one frame has esta
 
 ## Stitch and verify
 
-Run `scripts/stitch-long-screenshot.sh` over accepted segments in chronological order, then run `scripts/qa-stitched-output.sh --mode <fast|verified>`. Follow the mode-specific rules in `long-screenshot.md` and `automated-checks.md`.
+Run `sh scripts/stitch-long-screenshot.sh` over accepted segments in chronological order, then run `sh scripts/qa-stitched-output.sh --mode <fast|verified>`. Follow the mode-specific rules in `long-screenshot.md` and `automated-checks.md`.
 
 In fast mode, open the final image once for a top/bottom/order/black-block glance; animation discontinuities and minor seams are acceptable. In verified mode, inspect the middle and every flagged seam as well. Video compression may soften text, so use still frames when the user explicitly requires source-pixel fidelity.
 

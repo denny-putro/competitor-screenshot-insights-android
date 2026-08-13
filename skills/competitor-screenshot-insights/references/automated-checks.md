@@ -16,7 +16,7 @@ Exit codes are shared:
 Use this entrypoint for a compatible fast recording-assisted capture after the target-app visual gate has passed and the intended scroll container is at the top:
 
 ```bash
-scripts/capture-long-fast.sh \
+sh scripts/capture-long-fast.sh \
   --expected-bundle com.example.app \
   --before-screenshot /absolute/path/target-before.png \
   --work-dir /absolute/path/detail-full.fast-run \
@@ -38,7 +38,7 @@ The caller still owns the hard pre-semantic target gate: a session-sourced bundl
 At the verified top of a bounded page, calculate the planned gesture count deterministically:
 
 ```bash
-scripts/plan-scroll-count.sh \
+sh scripts/plan-scroll-count.sh \
   --content-height 4075 \
   --visible-height 844 \
   --scroll-distance 400 \
@@ -52,7 +52,7 @@ The command emits the base `ceil((content_height - visible_height) / scroll_dist
 Fast mode uses a deliberately lightweight integrity check:
 
 ```bash
-scripts/check-viewport.sh --image /absolute/path/current.png
+sh scripts/check-viewport.sh --image /absolute/path/current.png
 ```
 
 It verifies only that the file decodes and is not near-black. Pair it with one quick visual glance for the correct page, lock screen, transition, or obstruction. It does not wait for global stability or inspect animation quality.
@@ -70,7 +70,7 @@ This command never opens an app. It compares an optional expected bundle with `a
 For a named target app, capture the verified target before the first semantic snapshot, take the snapshot, capture again, then run:
 
 ```bash
-scripts/check-target-app.sh \
+sh scripts/check-target-app.sh \
   --expected-bundle com.example.app \
   --before-screenshot /absolute/path/target-before.png \
   --after-screenshot /absolute/path/target-after.png
@@ -85,7 +85,7 @@ The two screenshot paths must be distinct captures. A result with `state_source:
 Run this before renaming a probe to `segment-NNN.png`:
 
 ```bash
-scripts/validate-probe.sh \
+sh scripts/validate-probe.sh \
   --mode fast \
   --previous /absolute/path/segment-003.png \
   --probe /absolute/path/probe-004.png \
@@ -107,7 +107,7 @@ The default pan begins at the horizontal center shared by the app viewport and t
 Use the report produced by `stitch-long-screenshot.sh`:
 
 ```bash
-scripts/qa-stitched-output.sh \
+sh scripts/qa-stitched-output.sh \
   --mode fast \
   --stitched /absolute/path/detail-full.png \
   --report /absolute/path/detail-full.png.stitch.json
@@ -118,7 +118,7 @@ In `verified` mode, the check rejects duplicate inputs, large repeated regions, 
 For a deterministic manual stack without a stitch report, pass the ordered inputs and crop settings. The missing report normally forces `review`; use `--allow-missing-report` only when manual seam inspection is already mandatory:
 
 ```bash
-scripts/qa-stitched-output.sh \
+sh scripts/qa-stitched-output.sh \
   --stitched /absolute/path/detail-full.png \
   --segments /absolute/path/segments/segment-*.png \
   --top-crop 240 \

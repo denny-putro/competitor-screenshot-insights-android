@@ -1,6 +1,6 @@
 # Install and Preflight
 
-Agents must read this file completely when `scripts/preflight.sh` exits `10` with `status: setup_required`. Do not load it after a normal cached run returns `status: ready`.
+Agents must read this file completely when `sh scripts/preflight.sh` exits `10` with `status: setup_required`. Do not load it after a normal cached run returns `status: ready`.
 
 Do not reinstall working dependencies on every run. Inspect first, install only missing or incompatible components, and keep device names, signing identities, Team IDs, Bundle IDs, and absolute paths outside the Skill directory.
 
@@ -9,11 +9,11 @@ Do not reinstall working dependencies on every run. Inspect first, install only 
 Run this local-only check before every workflow:
 
 ```sh
-scripts/preflight.sh
+sh scripts/preflight.sh
 ```
 
 - Exit `0`, `status: ready`: return to `SKILL.md`; no installation work is needed.
-- Exit `10`, `status: setup_required`: complete the relevant setup below, then run `scripts/preflight.sh --record`.
+- Exit `10`, `status: setup_required`: complete the relevant setup below, then run `sh scripts/preflight.sh --record`.
 - Exit `2` or malformed output: stop and report a preflight implementation error.
 
 The cached marker lives in the user's local state directory and is invalidated only when the configuration, pinned dependencies, setup instructions, preflight implementation, or executable identities change. Override it with `CSI_INSTALL_STATE` only in a managed environment.
@@ -92,12 +92,12 @@ The location above is only a suggested per-user path. Use another stable path wh
 
 ## Write the private machine configuration
 
-Do not edit or replace the public `scripts/agent-device-env.sh` loader. Use `scripts/setup.sh`, which writes a mode-`600` private configuration under `$XDG_CONFIG_HOME/competitor-screenshot-insights/` or `~/.config/competitor-screenshot-insights/`.
+Do not edit or replace the public `scripts/agent-device-env.sh` loader. Use `sh scripts/setup.sh`, which writes a mode-`600` private configuration under `$XDG_CONFIG_HOME/competitor-screenshot-insights/` or `~/.config/competitor-screenshot-insights/`.
 
 Provide values verified on this machine:
 
 ```sh
-scripts/setup.sh \
+sh scripts/setup.sh \
   --device "Exact iPhone name" \
   --team-id "YOUR_TEAM_ID" \
   --bundle-id "com.yourname.agentdevice.runner" \
@@ -118,8 +118,8 @@ App mappings learned during research are also stored in the user's private confi
 Run:
 
 ```sh
-scripts/preflight.sh --record
-scripts/preflight.sh
+sh scripts/preflight.sh --record
+sh scripts/preflight.sh
 ```
 
 The first command performs deeper local version/import checks, runs deterministic tests, and records success only when everything passes. The second should return `status: ready` with `cached: true`. Neither command contacts the phone.

@@ -5,6 +5,7 @@ import os
 import shlex
 import stat
 import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -17,7 +18,7 @@ REGISTRY = ROOT / "references" / "app-bundle-ids.md"
 
 
 def run_with_registry(registry: Path, *args: str) -> subprocess.CompletedProcess[str]:
-    return subprocess.run([str(SCRIPT), "--registry", str(registry), *args], text=True, capture_output=True, check=False)
+    return subprocess.run([sys.executable, str(SCRIPT), "--registry", str(registry), *args], text=True, capture_output=True, check=False)
 
 
 def run(*args: str) -> subprocess.CompletedProcess[str]:
@@ -67,8 +68,9 @@ def fake_device_environment(root: Path, apps: tuple[str, ...], bundle_id: str, v
     config = root / "agent-device-env.sh"
     config.write_text(
         f"AGENT_DEVICE_RAW_BIN={shlex.quote(str(raw_cli))}\n"
+        f"SCREENSHOT_STITCHER_PYTHON={shlex.quote(sys.executable)}\n"
         f"PATH={shlex.quote(str(guard_dir))}:$PATH\n"
-        "export AGENT_DEVICE_RAW_BIN PATH\n",
+        "export AGENT_DEVICE_RAW_BIN SCREENSHOT_STITCHER_PYTHON PATH\n",
         encoding="utf-8",
     )
     environment = os.environ.copy()
@@ -264,6 +266,7 @@ class ResolveTargetAppTests(unittest.TestCase):
             manifest = root / "target.json"
             result = subprocess.run(
                 [
+                    "sh",
                     str(OPENER),
                     "--registry",
                     str(registry),
@@ -300,6 +303,7 @@ class ResolveTargetAppTests(unittest.TestCase):
             manifest = root / "target.json"
             result = subprocess.run(
                 [
+                    "sh",
                     str(OPENER),
                     "--app",
                     "Fresh Private App",
@@ -335,6 +339,7 @@ class ResolveTargetAppTests(unittest.TestCase):
             manifest = root / "target.json"
             result = subprocess.run(
                 [
+                    "sh",
                     str(OPENER),
                     "--registry",
                     str(registry),

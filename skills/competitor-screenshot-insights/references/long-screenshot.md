@@ -30,7 +30,7 @@ Choose the capture path before scrolling:
 - Prefer the still-frame path for short pages, pixel-critical text or design inspection, secure/blanked recording surfaces, active video or animation, complex nested scrolling, or a virtualized list whose semantic tree exposes no reliable total height.
 - Treat recording as an optimization, not a requirement. Fall back to still frames as soon as recording quality, page continuity, or bottom detection becomes unreliable; do not force a hybrid result with questionable video frames.
 
-In fast mode, `scripts/capture-long-fast.sh` makes this capability decision from structural and height evidence. It also applies the approved extent without taking another semantic snapshot. If the semantic snapshot times out, contains no nodes, or returns a `0×0` root, it records that reason and switches to a generic coordinate plan for the configured device rather than an app/page profile. Its adaptive still path uses a conservative vertical gesture, preserves overlap, accepts only visually verified vertical progress, stops at the approved progress target, and otherwise requires two successive no-progress probes when semantics cannot prove the bottom. Use the manual still procedure below only for diagnosis or a targeted fallback.
+In fast mode, `sh scripts/capture-long-fast.sh` makes this capability decision from structural and height evidence. It also applies the approved extent without taking another semantic snapshot. If the semantic snapshot times out, contains no nodes, or returns a `0×0` root, it records that reason and switches to a generic coordinate plan for the configured device rather than an app/page profile. Its adaptive still path uses a conservative vertical gesture, preserves overlap, accepts only visually verified vertical progress, stops at the approved progress target, and otherwise requires two successive no-progress probes when semantics cannot prove the bottom. Use the manual still procedure below only for diagnosis or a targeted fallback.
 
 Default vertical gestures begin at the horizontal center shared by the app viewport and the selected scroll container, outside the iOS edge-gesture zones. For recording-assisted capture, an accepted positive scroll followed by both a no-progress extracted position and a no-progress bottom screenshot may establish the actual bottom when the semantic height estimate is too large.
 
@@ -41,7 +41,7 @@ Default vertical gestures begin at the horizontal center shared by the app viewp
 3. Scroll the main vertical container by roughly 60–70% of its visible content height, leaving 30–40% overlap. Scale the gesture to the current viewport and adjust when the app has large fixed bars.
 4. After each routine scroll, wait only until the scrolling body has settled enough to capture; do not wait for unrelated animated regions. Capture to a provisional path outside the final `segment-*.png` glob, such as `probe-001.png`. Treat the screenshot as the primary post-scroll observation; do not immediately request a full semantic snapshot.
 5. Inspect the probe immediately and compare its scrollable body with the last accepted segment. Ignore fixed status/navigation/tab/reservation bars, clocks, animated media, and other non-scrolling changes when deciding whether the body contains new vertical content.
-6. Run `scripts/validate-probe.sh --mode <fast|verified>` with the last accepted segment, the probe, and the applicable fixed-chrome crops. Promote the probe on exit `0`, including fast warnings, after confirming the correct page/container. Exclude exit `10` probes; inspect or recapture exit `11` probes.
+6. Run `sh scripts/validate-probe.sh --mode <fast|verified>` with the last accepted segment, the probe, and the applicable fixed-chrome crops. Promote the probe on exit `0`, including fast warnings, after confirming the correct page/container. Exclude exit `10` probes; inspect or recapture exit `11` probes.
 7. Take a fresh full semantic snapshot only when the scroll target or page state is ambiguous, a probe shows no progress, visual content suggests the page is near its end, or bottom confirmation is required. Do not snapshot after every accepted segment.
 8. Stop without capturing another formal segment when semantic and visual evidence agree that the end is reached:
    - semantics show no content below, the scroll position is at the end, or a known terminal element is present; and
@@ -55,7 +55,7 @@ Avoid nested maps, carousels, sheets, and horizontally scrolling elements. If a 
 Source `scripts/agent-device-env.sh`, then run:
 
 ```bash
-scripts/stitch-long-screenshot.sh \
+sh scripts/stitch-long-screenshot.sh \
   --profile generic \
   -o /absolute/path/detail-full.png \
   /absolute/path/segments/segment-*.png
@@ -76,7 +76,7 @@ Profiles:
 
 Override a profile with `--top-crop`, `--bottom-crop`, or `--x-margin` when fixed UI differs.
 
-After stitching, run `scripts/qa-stitched-output.sh --mode <fast|verified>` with the stitched PNG and its `.stitch.json` report. Do not deliver an exit `10` result. In fast mode, exit-`0` warnings do not trigger repair; in verified mode, resolve every exit `11` reason.
+After stitching, run `sh scripts/qa-stitched-output.sh --mode <fast|verified>` with the stitched PNG and its `.stitch.json` report. Do not deliver an exit `10` result. In fast mode, exit-`0` warnings do not trigger repair; in verified mode, resolve every exit `11` reason.
 
 ## Interpret diagnostics
 

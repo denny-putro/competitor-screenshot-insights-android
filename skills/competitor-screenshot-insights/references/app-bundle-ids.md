@@ -2,7 +2,7 @@
 
 This table is the verified cache for an explicitly named app's launch target. Do not manually select a bundle ID, infer a brand from a company name, reuse the foreground session, or inspect the installed-app list to choose a launch target.
 
-Use `scripts/open-mapped-app.sh` for every named-app launch. It first accepts only an exact App value or explicit Alias from this table. If no entry exists, it alone may query the phone's installed-app inventory: only one exact display-name match is eligible. It opens that discovered bundle, captures a launch screenshot, and requires the installed name, foreground bundle, and visible application label to agree before automatically appending a mapping and writing a target manifest. No match, duplicate display name, or identity mismatch is a hard stop.
+Use `sh scripts/open-mapped-app.sh` for every named-app launch. It first accepts only an exact App value or explicit Alias from this table. If no entry exists, it alone may query the phone's installed-app inventory: only one exact display-name match is eligible. It opens that discovered bundle, captures a launch screenshot, and requires the installed name, foreground bundle, and visible application label to agree before automatically appending a mapping and writing a target manifest. No match, duplicate display name, or identity mismatch is a hard stop.
 
 The automation may append a previously unknown mapping only after this complete verification. Do not manually add, change, or delete mappings during research. Treat corrections to an existing mapping as a separate, user-authorized maintenance task.
 

@@ -129,8 +129,8 @@ fi
 
 require_executable "$NODE_BIN" node_missing
 require_executable "$AGENT_DEVICE_EXECUTABLE" agent_device_missing
-require_executable "$APP_TARGET_RESOLVER" target_resolver_missing
-require_executable "$APP_TARGET_OPENER" target_opener_missing
+require_file "$APP_TARGET_RESOLVER" target_resolver_missing
+require_file "$APP_TARGET_OPENER" target_opener_missing
 require_executable "$APP_TARGET_GUARD" target_open_guard_missing
 require_file "$APP_BUNDLE_REGISTRY" app_bundle_registry_missing
 require_directory "${AGENT_DEVICE_XCODE_APP:-}" xcode_app_missing
@@ -154,7 +154,7 @@ if [ "${AGENT_DEVICE_PLATFORM:-}" != ios ]; then
   add_reason ios_platform_configuration_missing
 fi
 
-if [ -x "$APP_TARGET_RESOLVER" ] && [ -f "$APP_BUNDLE_REGISTRY" ] && ! "$APP_TARGET_RESOLVER" --registry "$APP_BUNDLE_REGISTRY" validate >/dev/null 2>&1; then
+if [ -f "$APP_TARGET_RESOLVER" ] && [ -f "$APP_BUNDLE_REGISTRY" ] && ! "$SCREENSHOT_STITCHER_PYTHON" "$APP_TARGET_RESOLVER" --registry "$APP_BUNDLE_REGISTRY" validate >/dev/null 2>&1; then
   add_reason app_bundle_registry_invalid
 fi
 

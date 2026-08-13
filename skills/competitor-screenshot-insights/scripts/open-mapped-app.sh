@@ -58,8 +58,8 @@ fi
 
 RESOLUTION=
 MODE=registered
-if RESOLUTION=$("$RESOLVER" --registry "$REGISTRY" resolve --app "$TARGET_APP"); then
-  BUNDLE_ID=$(printf '%s' "$RESOLUTION" | python3 -c 'import json, sys; print(json.load(sys.stdin)["target"]["bundle_id"])')
+if RESOLUTION=$("$SCREENSHOT_STITCHER_PYTHON" "$RESOLVER" --registry "$REGISTRY" resolve --app "$TARGET_APP"); then
+  BUNDLE_ID=$(printf '%s' "$RESOLUTION" | "$SCREENSHOT_STITCHER_PYTHON" -c 'import json, sys; print(json.load(sys.stdin)["target"]["bundle_id"])')
 else
   RESOLVE_CODE=$?
   if [ "$RESOLVE_CODE" -ne 3 ]; then
@@ -77,14 +77,14 @@ trap 'rm -f "$STATE_FILE" "$SNAPSHOT_FILE" "$INVENTORY_FILE"' EXIT HUP INT TERM
 if [ "$MODE" = discover ]; then
   INVENTORY_FILE=$(mktemp)
   agent-device apps --json > "$INVENTORY_FILE"
-  if DISCOVERY=$("$RESOLVER" --registry "$REGISTRY" discover --app "$TARGET_APP" --inventory "$INVENTORY_FILE"); then
+  if DISCOVERY=$("$SCREENSHOT_STITCHER_PYTHON" "$RESOLVER" --registry "$REGISTRY" discover --app "$TARGET_APP" --inventory "$INVENTORY_FILE"); then
     :
   else
     DISCOVERY_CODE=$?
     printf '%s\n' "$DISCOVERY" >&2
     exit "$DISCOVERY_CODE"
   fi
-  BUNDLE_ID=$(printf '%s' "$DISCOVERY" | python3 -c 'import json, sys; print(json.load(sys.stdin)["candidate"]["bundle_id"])')
+  BUNDLE_ID=$(printf '%s' "$DISCOVERY" | "$SCREENSHOT_STITCHER_PYTHON" -c 'import json, sys; print(json.load(sys.stdin)["candidate"]["bundle_id"])')
 fi
 
 "$AGENT_DEVICE_RAW_BIN" open "$BUNDLE_ID"
@@ -93,14 +93,14 @@ agent-device screenshot "$SCREENSHOT" --normalize-status-bar
 agent-device appstate > "$STATE_FILE"
 agent-device snapshot --json > "$SNAPSHOT_FILE"
 if [ "$MODE" = registered ]; then
-  "$RESOLVER" --registry "$REGISTRY" verify \
+  "$SCREENSHOT_STITCHER_PYTHON" "$RESOLVER" --registry "$REGISTRY" verify \
     --app "$TARGET_APP" \
     --appstate "$STATE_FILE" \
     --snapshot "$SNAPSHOT_FILE" \
     --screenshot "$SCREENSHOT" \
     --manifest "$MANIFEST"
 else
-  "$RESOLVER" --registry "$REGISTRY" register-discovered \
+  "$SCREENSHOT_STITCHER_PYTHON" "$RESOLVER" --registry "$REGISTRY" register-discovered \
     --app "$TARGET_APP" \
     --inventory "$INVENTORY_FILE" \
     --appstate "$STATE_FILE" \

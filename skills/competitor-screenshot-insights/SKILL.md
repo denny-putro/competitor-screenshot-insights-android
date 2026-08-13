@@ -9,7 +9,7 @@ Plan a business-level journey, obtain one scope confirmation, operate the connec
 
 ## Installation gate
 
-1. Run `scripts/preflight.sh` before planning any workflow. This fast check is local-only and must not contact the phone.
+1. Run `sh scripts/preflight.sh` before planning any workflow. This fast check is local-only and must not contact the phone.
 2. On exit `0` with `status: ready`, reuse the verified installation and do not read `INSTALL.md`.
 3. On exit `10` with `status: setup_required`, read `INSTALL.md` completely, follow its setup flow, and record the successful installation as instructed there. Resume the original request after setup; do not make the user repeat it.
 4. On exit `2` or malformed output, stop and report the preflight error. Do not operate the phone.
@@ -20,7 +20,7 @@ The cached marker covers local installation readiness, not live phone readiness.
 ## Non-negotiable gates
 
 - Do not issue an Agent Device command that interacts with the phone before the user approves either the journey or discovery scope, except for an explicitly approved setup or health step from `INSTALL.md`.
-- For every explicitly named app, launch only through `scripts/open-mapped-app.sh`. It is the mandatory name → registry → bundle → foreground bundle → visible-brand gate. A registry miss triggers only the script's exact installed-name discovery; direct `agent-device apps`, the active session, and manual bundle selection are never launch fallbacks. After `agent-device-env.sh` is sourced, raw `agent-device open` is blocked.
+- For every explicitly named app, launch only through `sh scripts/open-mapped-app.sh`. It is the mandatory name → registry → bundle → foreground bundle → visible-brand gate. A registry miss triggers only the script's exact installed-name discovery; direct `agent-device apps`, the active session, and manual bundle selection are never launch fallbacks. After `agent-device-env.sh` is sourced, raw `agent-device open` is blocked.
 - Require the gate's launch screenshot and target manifest before capturing any journey evidence. A uniquely exact installed-name match may be automatically registered only after its installed name, foreground bundle, and visible application label agree. If discovery is absent or ambiguous, or any identity check mismatches, stop. Do not choose a likely app, use a sibling brand, manually edit the mapping, or use discovery to replace an existing mapping during research.
 - Treat the visible foreground app plus the requested app as the target. Never trust the persistent session binding by itself. Stop before app-scoped observation when the bundle and visible screen disagree.
 - Enter a payment page only for screenshots, read-only scrolling, back, or close. Never enter payment data, choose or save a payment method, confirm a purchase, use a wallet or balance, or trigger biometric payment. Record `payment_page_reached` and end the journey there.
@@ -34,7 +34,7 @@ The cached marker covers local installation readiness, not live phone readiness.
 2. Use **directed mode** when the user identifies an app, function, page, or journey. Stay within that goal.
 3. Use **discovery mode** when the user asks to “look at this app,” collect research screenshots, identify functions, or research a theme whose app structure is unknown. Read `references/discovery-mode.md` completely.
 4. Choose a viewport for a single state, modal, control, or result. Choose a long screenshot when ordered vertical context adds material evidence. For long capture, read `references/long-screenshot.md`; read `references/video-long-screenshot.md` only when recording is relevant.
-5. For every explicitly named app, use `scripts/open-mapped-app.sh`; it seeds a private per-user registry from `references/app-bundle-ids.md`, validates that registry automatically, and, only when the target is absent, performs exact installed-name discovery plus post-launch registration. Read `references/automated-checks.md` only before running bundled checks, and `references/runner-recovery.md` only after a Runner failure. Do not preload recovery or verified-mode material on the normal fast path.
+5. For every explicitly named app, use `sh scripts/open-mapped-app.sh`; it seeds a private per-user registry from `references/app-bundle-ids.md`, validates that registry automatically, and, only when the target is absent, performs exact installed-name discovery plus post-launch registration. Read `references/automated-checks.md` only before running bundled checks, and `references/runner-recovery.md` only after a Runner failure. Do not preload recovery or verified-mode material on the normal fast path.
 
 ## Plan and confirm
 
@@ -67,11 +67,11 @@ The cached marker covers local installation readiness, not live phone readiness.
 ## Execute the approved scope
 
 1. Source `scripts/agent-device-env.sh`. Use `$AGENT_DEVICE_SESSION` for every stateful command. Confirm the physical iPhone and Runner are usable and the phone is unlocked. A black screenshot is a failed capture.
-2. For an explicitly named app, run `scripts/open-mapped-app.sh --app <requested name> --screenshot <absolute launch.png> --manifest <absolute target.json>` before every journey. The command is the only allowed app-opening path: it resolves a registered target or performs exact installed-name discovery, opens only its selected bundle, captures the visible screen, and verifies foreground bundle plus visible application label. The latter path automatically appends a new mapping only after all checks pass. Keep its manifest with the evidence set.
+2. For an explicitly named app, run `sh scripts/open-mapped-app.sh --app <requested name> --screenshot <absolute launch.png> --manifest <absolute target.json>` before every journey. The command is the only allowed app-opening path: it resolves a registered target or performs exact installed-name discovery, opens only its selected bundle, captures the visible screen, and verifies foreground bundle plus visible application label. The latter path automatically appends a new mapping only after all checks pass. Keep its manifest with the evidence set.
 3. If the target gate fails, stop before any app-scoped observation or interaction. Do not use the session binding, a manually run installed-app lookup, a manually supplied bundle, a similar brand, or a manual registry edit to recover. Report whether the deterministic result was not installed, ambiguous, an identity mismatch, or an existing-mapping conflict; request a separately authorized mapping-maintenance task only to correct an existing mapping.
 4. Take a semantic snapshot only when navigation, scroll planning, or state verification needs it. Prefer mutation commands with `--settle`; reuse an unambiguous settle result instead of immediately taking another full snapshot. Never reuse stale refs after a material UI change.
-5. Capture to explicit absolute paths. In fast viewport mode, run `scripts/check-viewport.sh` and visually confirm the correct readable state. Retry once only after a hard failure.
-6. For fast long capture, preserve the target-gate screenshot and call `scripts/capture-long-fast.sh` with the verified bundle, a fresh work directory, and the approved extent. Do not issue concurrent device commands. The versioned `run.json` records stages, failure code, command counts, fallbacks, extent, and final outcome.
+5. Capture to explicit absolute paths. In fast viewport mode, run `sh scripts/check-viewport.sh` and visually confirm the correct readable state. Retry once only after a hard failure.
+6. For fast long capture, preserve the target-gate screenshot and call `sh scripts/capture-long-fast.sh` with the verified bundle, a fresh work directory, and the approved extent. Do not issue concurrent device commands. The versioned `run.json` records stages, failure code, command counts, fallbacks, extent, and final outcome.
 7. Allow one targeted fallback only after changing a causal condition. Stop a single screenshot repair at about 90 seconds. Do not replay an unchanged action after the same failure signature.
 
 ## Preserve and hand off evidence

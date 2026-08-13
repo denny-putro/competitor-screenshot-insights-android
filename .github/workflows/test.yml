@@ -24,5 +24,13 @@ jobs:
         env:
           CSI_EVAL_PYTHON: ${{ env.pythonLocation }}/bin/python
         run: sh skills/competitor-screenshot-insights/scripts/run-tests.sh
+      - name: Test GitHub archive installation mode
+        env:
+          CSI_EVAL_PYTHON: ${{ env.pythonLocation }}/bin/python
+        run: |
+          archive_root=$(mktemp -d)
+          cp -R skills/competitor-screenshot-insights "$archive_root/competitor-screenshot-insights"
+          find "$archive_root/competitor-screenshot-insights/scripts" -type f -exec chmod a-x {} +
+          sh "$archive_root/competitor-screenshot-insights/scripts/run-tests.sh"
       - name: Check release hygiene
         run: sh scripts/release-check.sh
