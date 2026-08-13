@@ -1,0 +1,22 @@
+.DS_Store
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# Private machine configuration and state
+agent-device-env.local.sh
+.env
+.env.*
+install-state.json
+
+# Runtime evidence and generated artifacts
+artifacts/
+captures/
+evidence/
+recordings/
+screenshots/
+*.log
+*.mov
+*.mp4

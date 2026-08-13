@@ -1,0 +1,9 @@
+#!/bin/sh
+set -eu
+
+if [ "${1:-}" = "open" ]; then
+  printf '%s\n' 'Blocked raw app launch. Use scripts/open-mapped-app.sh with a registered app name/alias or an exact installed App name, launch screenshot, and target manifest.' >&2
+  exit 64
+fi
+
+exec "${AGENT_DEVICE_RAW_BIN:?AGENT_DEVICE_RAW_BIN is required}" "$@"

@@ -1,0 +1,28 @@
+name: Test
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  skill:
+    runs-on: macos-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: skills/competitor-screenshot-insights/requirements-eval.txt
+      - name: Install validation dependencies
+        run: python -m pip install -r skills/competitor-screenshot-insights/requirements-eval.txt
+      - name: Run deterministic Skill tests
+        env:
+          CSI_EVAL_PYTHON: ${{ env.pythonLocation }}/bin/python
+        run: sh skills/competitor-screenshot-insights/scripts/run-tests.sh
+      - name: Check release hygiene
+        run: sh scripts/release-check.sh
