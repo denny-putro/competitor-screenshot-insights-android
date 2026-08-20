@@ -50,7 +50,7 @@ Use only when the Runner is unavailable, a session cannot recover, or the XCTest
 2. Confirm no Agent Device `xcodebuild` or Runner process remains. Do not kill unrelated Xcode processes.
 3. Terminate the device `testmanagerd` process once through `devicectl`; iOS will recreate it when XCTest starts.
 4. Run one `prepare ios-runner --platform ios --timeout 90000` health probe.
-5. If the probe succeeds, remember that `prepare` proves Runner health but may not create an App session. Use the normal target-app rules to open the intended app and establish `$AGENT_DEVICE_SESSION`, then confirm `appstate` and take one lightweight health screenshot before navigation. A `SESSION_NOT_FOUND` screenshot immediately after a successful `prepare` is not a Runner regression.
+5. If the probe succeeds, remember that `prepare` proves Runner health but may not create an App session. In research mode, use the normal target-app rules to open the intended app and establish `$AGENT_DEVICE_SESSION`, then confirm `appstate` and take one lightweight health screenshot before navigation. In modal fast-capture mode, rerun `sh scripts/fast-capture-mode.sh start`; its app-target-free session rebinding establishes `$AGENT_DEVICE_SESSION` against the current foreground without selecting or switching apps. A `SESSION_NOT_FOUND` screenshot immediately after a successful `prepare` is not a Runner regression.
 
 Do not run a second Level 1 probe. If the same DTX/code-74 signature returns after a fresh build, Level 1 has conclusively failed.
 

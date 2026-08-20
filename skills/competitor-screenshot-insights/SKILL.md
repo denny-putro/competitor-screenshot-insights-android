@@ -1,11 +1,11 @@
 ---
 name: competitor-screenshot-insights
-description: Operate and research an app on a connected physical iPhone with Agent Device, then return verified viewport screenshots, bounded long screenshots, or an ordered viewport evidence pack. Use for directed iPhone journeys and for open-ended requests to inspect an unfamiliar app, discover its core functions, collect research evidence, compare product experiences, or prepare screenshots for an HTML competitor report.
+description: Operate and research an app on a connected physical iPhone with Agent Device, then return verified viewport screenshots, bounded long screenshots, or an ordered viewport evidence pack. Use when the user says “开启快速截屏” or an English fast-screenshot-mode equivalent; while that modal session is active for loose screenshot commands such as “截图”, “长截图”, “全截图”, or English equivalents; when a screenshot-only request needs the fast mode activated first; for directed iPhone journeys; and for open-ended app research or competitor evidence collection.
 ---
 
 # Competitor Screenshot Insights
 
-Plan a business-level journey, obtain one scope confirmation, operate the connected iPhone, and preserve useful evidence even when a long composite fails.
+Use modal fast capture for screenshot-only commands. For app journeys, analysis, or evidence collection, follow the research workflow: plan at the business level, obtain one scope confirmation, operate the connected iPhone, and preserve useful evidence even when a long composite fails.
 
 ## Installation gate
 
@@ -15,11 +15,13 @@ Plan a business-level journey, obtain one scope confirmation, operate the connec
 4. On exit `2` or malformed output, stop and report the preflight error. Do not operate the phone.
 5. Do not reinstall or reconfigure dependencies without evidence that they are missing, stale, or incompatible.
 
+For modal fast capture, let `scripts/fast-capture-mode.sh` perform this preflight for `start` and `capture`. Do not run a duplicate preflight before the wrapper.
+
 The cached marker covers local installation readiness, not live phone readiness. Do not issue an Agent Device command that connects to, observes, controls, or changes the physical phone until the installation gate passes and the user has approved the relevant setup or research scope.
 
 ## Non-negotiable gates
 
-- Do not issue an Agent Device command that interacts with the phone before the user approves either the journey or discovery scope, except for an explicitly approved setup or health step from `INSTALL.md`.
+- Do not issue an Agent Device command that interacts with the phone before the user approves either the journey or discovery scope, except for an activation phrase matched by the fast-mode router or an explicitly approved setup or health step from `INSTALL.md`. Treat fast-mode activation as approval only for a read-only USB transport check, Runner warm-up, content-free keepalive, and session-only rebinding to the current foreground app identity. The rebinding command must contain no app name, bundle ID, or URL and must not relaunch or switch apps. Treat an accepted capture command while that mode is active as approval only for its fixed capture behavior and repair of that same foreground-following session when a Runner reset removed it.
 - For every explicitly named app, launch only through `sh scripts/open-mapped-app.sh`. It is the mandatory name → registry → bundle → foreground bundle → visible-brand gate. A registry miss triggers only the script's exact installed-name discovery; direct `agent-device apps`, the active session, and manual bundle selection are never launch fallbacks. After `agent-device-env.sh` is sourced, raw `agent-device open` is blocked.
 - Require the gate's launch screenshot and target manifest before capturing any journey evidence. A uniquely exact installed-name match may be automatically registered only after its installed name, foreground bundle, and visible application label agree. If discovery is absent or ambiguous, or any identity check mismatches, stop. Do not choose a likely app, use a sibling brand, manually edit the mapping, or use discovery to replace an existing mapping during research.
 - Treat the visible foreground app plus the requested app as the target. Never trust the persistent session binding by itself. Stop before app-scoped observation when the bundle and visible screen disagree.
@@ -30,13 +32,26 @@ The cached marker covers local installation readiness, not live phone readiness.
 
 ## Route the request
 
-1. Read `references/capture-modes.md`. Default to `fast`. Use `verified` only when the user explicitly requires formal-report fidelity, pixel accuracy, or a seamless composite.
-2. Use **directed mode** when the user identifies an app, function, page, or journey. Stay within that goal.
-3. Use **discovery mode** when the user asks to “look at this app,” collect research screenshots, identify functions, or research a theme whose app structure is unknown. Read `references/discovery-mode.md` completely.
-4. Choose a viewport for a single state, modal, control, or result. Choose a long screenshot when ordered vertical context adds material evidence. For long capture, read `references/long-screenshot.md`; read `references/video-long-screenshot.md` only when recording is relevant.
-5. For every explicitly named app, use `sh scripts/open-mapped-app.sh`; it seeds a private per-user registry from `references/app-bundle-ids.md`, validates that registry automatically, and, only when the target is absent, performs exact installed-name discovery plus post-launch registration. Read `references/automated-checks.md` only before running bundled checks, and `references/runner-recovery.md` only after a Runner failure. Do not preload recovery or verified-mode material on the normal fast path.
+1. When the message might activate, exit, or use modal fast capture—or the conversation indicates that mode is active—run `sh scripts/fast-capture-mode.sh route '<complete user message>'` first. Follow **Modal fast-capture mode** when it returns a matched action. Exit `10` means the mode did not claim the request.
+2. Use **research mode / directed route** when the user identifies an app, function, page, journey, navigation step, analysis, or any other semantic work in addition to a screenshot.
+3. Use **research mode / discovery route** when the user asks to “look at this app,” collect research screenshots, identify functions, or research a theme whose app structure is unknown. Read `references/discovery-mode.md` completely.
+4. For either research route, read `references/capture-modes.md`. Default to `fast`. Use `verified` only when the user explicitly requires formal-report fidelity, pixel accuracy, or a seamless composite.
+5. Choose a viewport for a single state, modal, control, or result. Choose a long screenshot when ordered vertical context adds material evidence. For long capture, read `references/long-screenshot.md`; read `references/video-long-screenshot.md` only when recording is relevant.
+6. For every explicitly named app, use `sh scripts/open-mapped-app.sh`; it seeds and validates a private per-user registry from `references/app-bundle-ids.md` automatically and, only when the target is absent, performs exact installed-name discovery plus post-launch registration. Read `references/automated-checks.md` only before running bundled checks, and `references/runner-recovery.md` only after a Runner failure. Do not preload recovery or verified-mode material on the normal fast path.
+
+## Modal fast-capture mode
+
+- Activate on the router's `start` action by immediately running `sh scripts/fast-capture-mode.sh start`. Before Runner warm-up, the wrapper requires the configured physical iPhone to appear as available with `interface: usb` in Xcode's `xcdevice` inventory. CoreDevice's `transportType` describes its selected tunnel and may remain `localNetwork` while the cable is connected, so never use that field as physical-USB evidence. A network-only, unavailable, ambiguous, or missing Xcode device must stop activation with a USB-connect message. After that gate, the wrapper performs a read-only Runner warm-up, releases only the prior Agent Device session record when necessary, creates a session with no app target so it follows the current foreground app, verifies that the session returns an app identity, and starts a content-free heartbeat. Do not report the mode active until all gates pass. The wrapper's session-only `open` is the sole fast-mode exception to the raw-open guard: it must contain no app name, bundle ID, URL, or relaunch flag. Repeated activation reuses the verified session generation.
+- On `inactive_capture`, do not operate the phone; reply: `请先说“开启快速截屏”。`
+- While active, accept only the router's `capture`, `stop`, or repeated `start` actions. For `blocked`, do not operate the phone or answer the semantic request; reply exactly: `当前处于快速截屏模式，请先说“退出快速截屏”。`
+- On `capture`, run `sh scripts/fast-capture-mode.sh capture --message '<complete user message>' --output <absolute-unique.png>` immediately. Add a fresh `--work-dir` for long or full capture. Before capture, the wrapper verifies the recorded session generation; if a Runner reset removed or replaced it, the wrapper recreates the same app-target-free foreground-following session under the device lock. Return the resulting image without analysis. The router deliberately accepts concise natural Chinese and English variants inside this mode, including `截屏`, `截图`, `长截屏`, `长截图`, `全截屏`, `全截图`, `screenshot`, `long screenshot`, `scrolling screenshot`, and `full screenshot`.
+- Interpret `viewport` as the current visible screen, `long` as downward capture from the current position, and `full` as top-to-bottom capture. Do not pass an app target, open or relaunch a named app, navigate, inspect page content, analyze, compare, or research.
+- On `stop`, run `sh scripts/fast-capture-mode.sh stop`, stop the heartbeat, and report that normal routing has resumed. Exiting does not close or alter the foreground app.
+- The mode and heartbeat expire after 10 minutes without an accepted activation or capture. Each accepted capture refreshes the idle timer. Heartbeats use the Runner's content-free uptime probe, save no screenshot or page content, do not inspect accessibility, and share the device-workflow lock with captures.
 
 ## Plan and confirm
+
+Skip this section entirely for modal fast-capture mode.
 
 - Start from the user's research question and the product decision the evidence should support. Summarize the intended understanding in one sentence; do not turn a focused request into a generic app tour.
 - Before writing the confirmation, build a compact UX coverage map for the approved goal:
@@ -65,6 +80,8 @@ The cached marker covers local installation readiness, not live phone readiness.
 - If a journey cannot reach the approved endpoint, preserve what was captured and report the actual blocker. Do not silently treat an incomplete journey as intentionally complete.
 
 ## Execute the approved scope
+
+For modal fast-capture mode, use only the wrapper specified above and return its artifact. For research mode, continue with the steps below.
 
 1. Source `scripts/agent-device-env.sh`. Use `$AGENT_DEVICE_SESSION` for every stateful command. Confirm the physical iPhone and Runner are usable and the phone is unlocked. A black screenshot is a failed capture.
 2. For an explicitly named app, run `sh scripts/open-mapped-app.sh --app <requested name> --screenshot <absolute launch.png> --manifest <absolute target.json>` before every journey. The command is the only allowed app-opening path: it resolves a registered target or performs exact installed-name discovery, opens only its selected bundle, captures the visible screen, and verifies foreground bundle plus visible application label. The latter path automatically appends a new mapping only after all checks pass. Keep its manifest with the evidence set.

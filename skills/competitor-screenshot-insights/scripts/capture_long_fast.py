@@ -527,6 +527,7 @@ def derive_scroll_plan(
     x_margin_override: int | None,
     gesture_x_override: int | None,
     gesture_y_override: int | None,
+    require_top: bool = True,
 ) -> dict[str, Any]:
     data = snapshot.get("data") or {}
     nodes = data.get("nodes") or []
@@ -844,10 +845,17 @@ def derive_scroll_plan(
         if count is not None
     ]
     scrollbar_page_count = max(page_counts) if page_counts else None
-    if scroll_position_percent is not None and scroll_position_percent > 3.0:
+    if require_top and scroll_position_percent is not None and scroll_position_percent > 3.0:
         raise PipelineError(
             f"Main scroll container is not at the top: {scroll_position_percent:.1f}%"
         )
+    position_warning = (
+        f"capture_started_below_top:{scroll_position_percent:.1f}%"
+        if not require_top
+        and scroll_position_percent is not None
+        and scroll_position_percent > 3.0
+        else None
+    )
 
     estimates = [descendant_extent]
     height_sources = ["descendant_extent"]
@@ -1066,6 +1074,7 @@ def derive_scroll_plan(
         "scrollbar_page_count": scrollbar_page_count,
         "semantic_results_total": semantic_results_total,
         "scroll_position_percent": scroll_position_percent,
+        "position_warning": position_warning,
         "scale_x": scale_x,
         "scale_y": scale_y,
         "scroll_distance": scroll_distance,
@@ -1814,6 +1823,7 @@ class Pipeline:
                 self.args.x_margin,
                 self.args.gesture_x,
                 self.args.gesture_y,
+                require_top=not self.args.allow_current_position,
             )
             return snapshot, geometry
 
@@ -1879,6 +1889,8 @@ class Pipeline:
             self.state["warnings"].append(geometry["height_warning"])
         if geometry.get("container_role_warning"):
             self.state["warnings"].append(geometry["container_role_warning"])
+        if geometry.get("position_warning"):
+            self.state["warnings"].append(geometry["position_warning"])
         self.persist()
 
         segment_zero = self.work_dir / "segment-000.png"
@@ -2339,6 +2351,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--max-runtime-seconds", type=float, default=90.0)
     parser.add_argument("--max-still-scrolls", type=int, default=20)
     parser.add_argument("--still-no-progress-count", type=int, default=2)
+    parser.add_argument(
+        "--allow-current-position",
+        action="store_true",
+        help="Start an extent-limited capture at the current vertical position",
+    )
     parser.add_argument("--overwrite", action="store_true")
     return parser
 

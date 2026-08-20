@@ -779,6 +779,57 @@ class SemanticFallbackTests(unittest.TestCase):
             )
         self.assertEqual(caught.exception.trigger, "no_nodes")
 
+    def test_current_position_can_be_used_for_command_long_capture(self) -> None:
+        snapshot = {
+            "data": {
+                "nodes": [
+                    {
+                        "index": 0,
+                        "type": "Application",
+                        "rect": {"x": 0, "y": 0, "width": 390, "height": 844},
+                    },
+                    {
+                        "index": 1,
+                        "parentIndex": 0,
+                        "type": "ScrollView",
+                        "hiddenContentBelow": True,
+                        "rect": {"x": 0, "y": 80, "width": 390, "height": 764},
+                    },
+                    {
+                        "index": 2,
+                        "parentIndex": 1,
+                        "type": "StaticText",
+                        "label": "Current page business content",
+                        "rect": {"x": 20, "y": 500, "width": 300, "height": 40},
+                    },
+                    {
+                        "index": 3,
+                        "parentIndex": 1,
+                        "type": "Other",
+                        "label": "Vertical scroll bar, 5 pages",
+                        "value": "43%",
+                        "rect": {"x": 386, "y": 80, "width": 4, "height": 764},
+                    },
+                ]
+            }
+        }
+        with self.assertRaises(MODULE.PipelineError):
+            self.derive(snapshot["data"]["nodes"])
+        plan = MODULE.derive_scroll_plan(
+            snapshot,
+            1170,
+            2532,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            require_top=False,
+        )
+        self.assertEqual(43.0, plan["scroll_position_percent"])
+        self.assertEqual("capture_started_below_top:43.0%", plan["position_warning"])
+
     def test_zero_sized_root_requests_coordinate_fallback(self) -> None:
         snapshot = {
             "data": {
