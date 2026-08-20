@@ -1,161 +1,163 @@
 # Competitor Screenshot Insights
 
-> 把真实 iPhone 变成一位可靠的竞品研究助手。
+**English** | [简体中文](README.zh-CN.md)
+
+> Turn a real iPhone into a reliable competitor-research assistant.
 
 **Public Beta · v0.2**
 
-Competitor Screenshot Insights 可以在真实设备上体验 App、还原关键用户旅程，并交付清晰的页面截图、长截图和有序证据包。无论你想拆解一个明确功能，还是探索一款陌生产品，它都能帮你把“看看竞品”变成一套可验证、可复用的研究过程。
+Competitor Screenshot Insights explores apps on a physical device, reconstructs important user journeys, and delivers clear viewport screenshots, long screenshots, and ordered evidence packs. Whether you want to examine a specific feature or explore an unfamiliar product, it turns “take a look at this competitor” into a verifiable, reusable research process.
 
-它适合产品经理、设计师、研究员和增长团队，用于竞品分析、体验对比、设计评审、机会发现与策略汇报。
+It is designed for product managers, designers, researchers, and growth teams working on competitive analysis, experience comparisons, design reviews, opportunity discovery, and strategic reporting.
 
-## 快速开始
+## Quick Start
 
-在 Codex 中，可以让 Agent 使用内置的 `skill-installer` 从 GitHub 安装：
+In Codex, ask the Agent to install the Skill from GitHub with the built-in `skill-installer`:
 
 > Install `competitor-screenshot-insights` from `fengjunnan-web/competitor-screenshot-insights`, path `skills/competitor-screenshot-insights`.
 
-首次运行时，Skill 会自动执行本地 preflight；只有缺少环境或配置发生变化时，Agent 才会读取并执行[安装说明](skills/competitor-screenshot-insights/INSTALL.md)。成功后会复用机器本地缓存，不会每次重复安装检查。
+On first use, the Skill runs a local preflight. The Agent reads and follows the [installation guide](skills/competitor-screenshot-insights/INSTALL.md) only when dependencies are missing or the configuration has changed. After a successful setup, it reuses a machine-local cache instead of repeating installation checks on every run.
 
-适合从这样的请求开始：
+Good starting requests include:
 
-- “研究这个 App 的会员购买旅程，给我关键截图。”
-- “探索一下这款 App 的商业化和广告设计。”
-- “对比两个 App 的搜索与筛选体验，保留完整证据。”
+- “Research this app’s membership-purchase journey and capture the key screens.”
+- “Explore how this app handles monetization and advertising.”
+- “Compare search and filtering in two apps and preserve the complete evidence.”
 
-## 快速截屏模式
+## Fast Screenshot Mode
 
-当你只想连续截取手机当前画面时，可以说“开启快速截屏”。Skill 会先确认配置的 iPhone 通过 USB 可用，再预热 Runner，并绑定当前前台 App；它不会替你打开或切换 App。
+When you only want to capture the phone’s current screen repeatedly, say `start fast screenshot mode`. The Skill first confirms that the configured iPhone is available over USB, warms the Runner, and binds to the current foreground app. It does not open or switch apps for you.
 
-模式开启后，可以直接使用简短的中文或英文命令：
+Once the mode is active, use concise English or Chinese commands:
 
-- `截图` / `screenshot`：截取当前可见画面；
-- `长截图` / `long screenshot`：从当前位置向下截取一段长图；
-- `全截图` / `full screenshot`：先回到页面顶部，再截取完整页面；
-- `退出快速截屏` / `exit fast screenshot mode`：结束模式并恢复普通对话。
+- `screenshot` / `截图`: capture the currently visible screen;
+- `long screenshot` / `长截图`: capture downward from the current position;
+- `full screenshot` / `全截图`: return to the top, then capture the full page;
+- `exit fast screenshot mode` / `退出快速截屏`: leave the mode and resume normal conversation.
 
-快速截屏模式只接收截图、重复开启和退出命令。需要分析页面、导航 App 或继续聊天时，请先退出该模式。模式会在连续 10 分钟没有有效操作后自动过期。
+Fast Screenshot Mode accepts only capture, repeated activation, and exit commands. Exit the mode before asking for page analysis, app navigation, or ordinary conversation. The mode expires automatically after 10 minutes without an accepted command.
 
-## 两种研究模式
+## Two Research Modes
 
-### 明确需求，精准执行
+### Directed research for a defined goal
 
-当你已经知道要研究哪个 App、功能或用户旅程时，它会进入定向模式，围绕目标完成体验与截图采集。
+When you already know which app, feature, or journey you want to study, the Skill follows a directed route and collects evidence around that goal.
 
-你可以让它：
+You can ask it to:
 
-- 截取从首页进入会员购买页的完整路径
-- 研究搜索、筛选和结果展示体验
-- 对比不同 App 的商品详情页
-- 收集某个核心功能的关键状态
+- capture the complete path from the home screen to a membership-purchase page;
+- study search, filtering, and result presentation;
+- compare product-detail pages across apps;
+- collect the important states of a core feature.
 
-它会聚焦任务本身，并适应页面入口、名称和顺序的变化，不需要你提前写出每一步点击指令。
+It stays focused on the task while adapting to changes in entry points, labels, and page order. You do not need to describe every tap in advance.
 
-### 模糊需求，主动探索
+### Guided discovery for an open question
 
-当你只有一个大致方向，例如“帮我看看这个 App”或“研究一下它的商业化设计”，它会进入探索模式。
+When you have only a broad direction—such as “take a look at this app” or “research its monetization design”—the Skill enters discovery mode.
 
-它会主动梳理产品结构、核心功能与关键体验路径，发现值得记录的页面，并逐步形成可以继续分析的证据。即使你还不知道准确的问题是什么，也可以从真实产品体验开始推进研究。
+It maps the product structure, core capabilities, and important experience paths; identifies screens worth preserving; and gradually builds evidence that can support deeper analysis. You can begin with the real product experience even before you know the exact research question.
 
-## 为什么核心交付是截图
+## Why Screenshots Are the Core Deliverable
 
-我们有意把截图作为核心交付，而不是把结果锁死在一份固定报告里。
+Screenshots are intentionally the primary output instead of locking every result into a fixed report format.
 
-截图是通用且可复用的产品研究证据。你可以按照自己的视角分析产品策略、信息架构、转化路径、交互细节或视觉风格，也可以把素材直接交给其他 AI、研究工具和团队成员继续处理，无需迁移数据或改变现有工作流。
+They are universal, reusable product-research evidence. You can analyze product strategy, information architecture, conversion paths, interaction details, or visual style from your own perspective. You can also pass the material directly to another AI, research tool, or teammate without migrating data or changing your workflow.
 
-所有素材都会尽量保留场景、顺序和上下文，让截图不仅“能看”，也能支持后续判断。
+The Skill preserves scenario, order, and context wherever possible so each screenshot supports judgment rather than merely looking presentable.
 
-同时，它可以配合可选的 `build-competitor-report-html` Skill 生成默认 HTML 报告，将关键截图组织成清晰的研究叙事：
+It can also work with the optional `build-competitor-report-html` Skill to generate a default HTML report that organizes selected screenshots into a clear research narrative:
 
-- 想快速查看和分享，可以直接使用 HTML 报告。
-- 想按自己的分析框架深入研究，可以使用原始截图证据。
-- 想进入团队已有的报告流程，也可以直接复用素材。
+- Use the HTML report for quick review and sharing.
+- Use the original screenshot evidence for analysis with your own framework.
+- Reuse the same material in an existing team reporting workflow.
 
-开箱即用与自由分析，两种需求都能兼顾。
+This supports both an out-of-the-box deliverable and open-ended analysis.
 
-## 我们优化了什么
+## What We Optimized
 
-真实 App 中有许多对人来说一眼就能判断、自动化却很容易出错的场景。我们花了时间把这些细节变成稳定的执行能力。
+Real apps contain many situations that people understand instantly but automation often mishandles. We turned those details into explicit, reliable behaviors.
 
-### 弹窗与广告
+### Pop-ups and advertisements
 
-启动广告、活动弹窗、授权提示和运营浮层经常遮挡目标内容。
+Launch ads, campaign pop-ups, permission prompts, and promotional overlays often cover the target content.
 
-系统会结合研究目标判断它们是需要关闭的干扰，还是本身值得保留的产品证据，减少误触，也避免错过有价值的商业化体验。
+The Skill uses the research goal to decide whether an overlay is an obstruction to close or valuable product evidence to preserve, reducing accidental taps without losing meaningful monetization patterns.
 
-### 横滑容器
+### Horizontal containers
 
-商品卡片、内容推荐、频道导航和横向轮播很容易被误判成普通页面。
+Product cards, content recommendations, channel navigation, and carousels are easily mistaken for ordinary vertical pages.
 
-针对横滑容器，我们优化了方向识别与操作策略，减少错误滑动、重复截图和内容遗漏。
+The Skill improves direction detection and gesture strategy for horizontal containers, reducing incorrect swipes, duplicate screenshots, and missing content.
 
-### 动态页面
+### Dynamic pages
 
-真实页面经常包含延迟加载、轮播 Banner、推荐模块、吸顶导航和不断变化的运营内容。
+Real pages often contain delayed loading, rotating banners, recommendation modules, sticky navigation, and continuously changing promotional content.
 
-执行过程会根据当前可见状态持续判断，避免依赖已经过期的页面结构，也能适应模块插入、入口变化和页面重排。
+The workflow evaluates the current visible state instead of relying on stale page structure, allowing it to adapt when modules appear, entry points move, or layouts are reordered.
 
-### 固定组件
+### Fixed interface elements
 
-底部导航、悬浮按钮和吸顶栏在长截图中可能反复出现，影响阅读与拼接。
+Bottom navigation, floating buttons, and sticky headers may repeat throughout a long screenshot and interfere with reading or stitching.
 
-我们会在保留真实页面上下文的同时，尽量降低这些固定元素对长图和证据整理的干扰。
+The Skill tries to reduce their impact on long captures and evidence organization while preserving authentic page context.
 
-### 从机械操作到目标判断
+### From mechanical gestures to goal-aware decisions
 
-它不是简单地按照坐标重复点击，而是持续判断当前页面是否仍然服务于研究目标。
+The Skill does not simply repeat taps at fixed coordinates. It continually checks whether the current page still serves the approved research goal.
 
-这让它能够在页面改版、入口变化或流程拆分时灵活调整，同时保持原定的研究范围和证据深度。
+This allows it to adapt when a page is redesigned, an entry point moves, or a flow is split into multiple steps while preserving the intended scope and evidence depth.
 
-## 如何保障稳定性
+## How Reliability Is Protected
 
-### 确认设备与目标 App
+### Device and target-app verification
 
-每次执行都会检查设备是否可用、手机是否解锁、画面是否正常，并核对当前前台 App 与研究目标是否一致，避免在错误应用或异常画面上继续操作。
+Each run checks whether the device is usable, the phone is unlocked, the screen is readable, and the foreground app matches the research target. It stops instead of continuing in the wrong app or an invalid state.
 
-### 单工作流执行
+### One device workflow at a time
 
-同一时间只运行一条设备工作流，避免点击、滚动、页面加载和截图互相干扰，让每张证据都有明确的操作上下文。
+Only one device workflow runs at a time, preventing taps, scrolling, page loading, and captures from interfering with each other. Every piece of evidence retains a clear operational context.
 
-### 等待页面稳定
+### Waiting for stable UI state
 
-每次操作后都会给界面足够时间完成切换，并避免继续使用已经失效的页面元素，降低动画、刷新和页面重排造成的误操作。
+The Skill gives the interface enough time to finish transitions and avoids reusing page elements that became stale after a change, reducing mistakes caused by animation, refreshes, and layout shifts.
 
-### 截图质量校验
+### Screenshot quality checks
 
-黑屏、锁屏、加载中、不可读、错误 App 或严重损坏的截图不会被直接当作有效结果交付。
+Black, locked, loading, unreadable, wrong-app, or severely corrupted screenshots are not delivered as valid evidence.
 
-遇到可以修复的问题时，只在改变导致问题的条件后进行针对性重试，避免无效循环。
+When a problem is recoverable, the Skill retries only after changing the condition that caused it, avoiding unproductive loops.
 
-### 长截图失败兜底
+### Long-screenshot fallback
 
-长截图拼接并不总能成功，尤其是在包含动态 Banner、固定导航和复杂滚动容器的页面中。
+Long-screenshot stitching does not always succeed, especially on pages with dynamic banners, fixed navigation, or complex scroll containers.
 
-因此，我们把失败兜底作为正式能力：如果无法生成合格长图，仍会保留并交付按浏览顺序整理好的 viewport 截图证据包。一次拼接失败，不会让整个研究过程白费。
+Fallback is therefore a first-class capability: if a valid composite cannot be produced, the Skill preserves and delivers an ordered viewport evidence pack. A failed stitch does not erase the entire research journey.
 
-### 过程可追溯
+### Traceable results
 
-交付结果会保留 App、研究场景、截图顺序、采集范围和停止原因。你不仅能看到结果，也能理解它是如何得到的，并将其用于复盘、协作和后续分析。
+Deliverables preserve the app, scenario, capture order, covered extent, and stop reason. You can inspect both the result and how it was produced, then reuse that context for review, collaboration, or further analysis.
 
-## 安全边界
+## Safety Boundaries
 
-真实设备研究需要足够深入，也需要明确边界。
+Physical-device research needs enough depth to be useful and clear limits to remain safe.
 
-进入支付页面后，只允许截图、查看、滚动、返回或关闭，不会填写支付信息、选择支付方式、确认购买或触发生物识别支付。
+After reaching a payment page, the Skill may only capture, inspect, scroll, go back, or close. It will not enter payment details, select a payment method, confirm a purchase, or trigger biometric payment.
 
-涉及下单、发消息、登录、修改账户或改变外部数据的操作，也会在真正提交前再次确认。
+It also asks for confirmation immediately before placing an order, sending a message, logging in, changing an account, or modifying external data outside the approved scope.
 
-## 兼容性与隐私
+## Compatibility and Privacy
 
-当前 beta 版本面向 macOS、真实 iPhone、兼容的 Xcode、Node.js 22.12+、Agent Device 0.20.x 和 Python 3.12+。不同 iOS/Xcode 组合可能需要按安装说明完成 Runner 配置。
+The current beta targets macOS, a physical iPhone, a compatible Xcode version, Node.js 22.12+, Agent Device 0.20.x, and Python 3.12+. Some iOS and Xcode combinations may require Runner configuration described in the installation guide.
 
-设备名称、Team ID、Bundle ID、机器路径、安装缓存和运行时学习到的 App 映射都保存在用户自己的配置目录，不进入 Skill 或仓库。研究截图可能包含账户或业务信息，分享前仍应由使用者检查并脱敏。
+Device names, Team IDs, Bundle IDs, machine paths, installation caches, and app mappings learned at runtime remain in the user’s private configuration directory. They are not stored in the Skill or repository. Research screenshots may still contain account or business information, so users should review and redact them before sharing.
 
-## 许可证
+## License
 
-本项目使用 [MIT License](LICENSE)。第三方运行时组件保留各自许可证。
+This project is available under the [MIT License](LICENSE). Third-party runtime components retain their respective licenses.
 
-## 从截图开始，让洞察保持开放
+## Start with Screenshots, Keep the Insight Open
 
-Competitor Screenshot Insights 不只是帮你“截几张图”。
+Competitor Screenshot Insights does more than “take a few screenshots.”
 
-它希望把真实 App 调研中最耗时、最容易出错的部分处理好，让你获得一套有顺序、有上下文、可验证、可继续分析的产品证据——把更多时间留给真正重要的洞察与决策。
+It handles the most time-consuming and failure-prone parts of real-app research so you receive ordered, contextual, verifiable evidence that remains open to further analysis—leaving more time for the insights and decisions that matter.
