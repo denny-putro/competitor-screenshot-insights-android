@@ -1,19 +1,23 @@
-# Competitor Screenshot Insights
+# 竞品研究 Skills
 [English](README.md) | **简体中文**
 
-> 把真实 iPhone 变成一位可靠的竞品研究助手。
+> 在真实 iPhone 上还原竞品旅程，再把证据整理成清晰的 HTML 图库。
 
 **Public Beta · v0.2**
 
-Competitor Screenshot Insights 可以在真实设备上体验 App、还原关键用户旅程，并交付清晰的页面截图、长截图和有序证据包。无论你想拆解一个明确功能，还是探索一款陌生产品，它都能帮你把“看看竞品”变成一套可验证、可复用的研究过程。
+这个仓库包含两个可安装的 Codex Skills：`competitor-screenshot-insights` 在真实设备上体验 App 并采集有序证据；`build-competitor-report-html` 把截图证据整理成中立、双语的 HTML 图库。两个 Skill 可以分别安装，也可以组合成完整的竞品研究工作流。
 
 它适合产品经理、设计师、研究员和增长团队，用于竞品分析、体验对比、设计评审、机会发现与策略汇报。
 
 ## 快速开始
 
-在 Codex 中，可以让 Agent 使用内置的 `skill-installer` 从 GitHub 安装：
+在 Codex 中，可以让 Agent 使用内置的 `skill-installer` 从 GitHub 安装其中一个或两个 Skill：
 
 > Install `competitor-screenshot-insights` from `fengjunnan-web/competitor-screenshot-insights`, path `skills/competitor-screenshot-insights`.
+
+> Install `build-competitor-report-html` from `fengjunnan-web/competitor-screenshot-insights`, path `skills/build-competitor-report-html`.
+
+报告 Skill 已经自包含字体、Hero、导航、测试口径和截图查看器等私有组件，不需要再安装额外的组件 Skills。它既可以使用 `competitor-screenshot-insights` 采集的证据，也可以处理其他来源的截图。
 
 首次运行时，Skill 会自动执行本地 preflight；只有缺少环境或配置发生变化时，Agent 才会读取并执行[安装说明](skills/competitor-screenshot-insights/INSTALL.md)。成功后会复用机器本地缓存，不会每次重复安装检查。
 
@@ -65,7 +69,7 @@ Competitor Screenshot Insights 可以在真实设备上体验 App、还原关键
 
 所有素材都会尽量保留场景、顺序和上下文，让截图不仅“能看”，也能支持后续判断。
 
-同时，它可以配合可选的 `build-competitor-report-html` Skill 生成默认 HTML 报告，将关键截图组织成清晰的研究叙事：
+同时，它可以配合仓库内的 `build-competitor-report-html` Skill 生成默认 HTML 报告，将关键截图组织成清晰的研究叙事：
 
 - 想快速查看和分享，可以直接使用 HTML 报告。
 - 想按自己的分析框架深入研究，可以使用原始截图证据。

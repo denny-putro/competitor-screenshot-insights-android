@@ -1,0 +1,4 @@
+interface:
+  display_name: "Competitor Screenshot HTML"
+  short_description: "Build neutral HTML galleries from screenshot evidence"
+  default_prompt: "Use $build-competitor-report-html to build a neutral bilingual HTML gallery from captured competitor screenshots."

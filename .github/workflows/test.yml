@@ -24,6 +24,8 @@ jobs:
         env:
           CSI_EVAL_PYTHON: ${{ env.pythonLocation }}/bin/python
         run: sh skills/competitor-screenshot-insights/scripts/run-tests.sh
+      - name: Validate self-contained report Skill
+        run: python skills/build-competitor-report-html/scripts/validate_package.py
       - name: Test GitHub archive installation mode
         env:
           CSI_EVAL_PYTHON: ${{ env.pythonLocation }}/bin/python

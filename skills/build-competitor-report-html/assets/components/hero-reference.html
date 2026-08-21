@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Shader Glass Report Hero Reference</title>
+    <link rel="stylesheet" href="report-foundation.css" />
+    <link rel="stylesheet" href="report-hero.css" />
+  </head>
+  <body>
+    <header class="hero" data-report-hero data-shader-status="loading">
+      <div class="hero-background" aria-hidden="true">
+        <canvas class="hero-background__shader"></canvas>
+      </div>
+
+      <div class="shell hero-grid hero-panel">
+        <div class="hero-intro">
+          <h1>研究报告标题</h1>
+          <p class="hero-copy">
+            用一句简洁说明概括研究对象、范围和主要分析维度。
+          </p>
+        </div>
+
+        <div class="hero-meta" aria-label="研究范围">
+          <div class="meta-row"><span>对象</span><strong>示例对象</strong></div>
+          <div class="meta-row"><span>业务</span><strong>示例业务</strong></div>
+          <div class="meta-row"><span>状态</span><strong>示例状态</strong></div>
+          <div class="meta-row"><span>日期</span><strong>YYYY-MM-DD</strong></div>
+        </div>
+      </div>
+    </header>
+
+    <div class="hero-cover">
+      <nav class="sticky-nav" aria-label="页面导航">
+        <div class="shell"></div>
+      </nav>
+      <main class="shell"></main>
+    </div>
+
+    <script src="report-hero.js"></script>
+  </body>
+</html>

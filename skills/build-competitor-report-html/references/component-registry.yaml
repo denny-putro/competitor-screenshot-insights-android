@@ -1,0 +1,57 @@
+version: 3
+
+components:
+  - id: typography
+    label: Report typography foundation
+    order: 10
+    selection: required
+    apply_when: Every generated or updated competitor screenshot HTML page.
+    reference: references/components/typography.md
+    assets:
+      - assets/components/report-foundation.css
+    ownership: This Skill owns the font stack, typography tokens, reading colors, and page shell.
+
+  - id: report-hero
+    label: Shader glass page header
+    order: 20
+    selection: when-applicable
+    apply_when: Use only when the screenshot set benefits from four concise scope facts. Keep the description to one or two neutral sentences and do not place analysis in the Hero.
+    reference: references/components/report-hero.md
+    assets:
+      - assets/components/report-hero.css
+      - assets/components/report-hero.js
+      - assets/components/hero-reference.html
+    ownership: This Skill owns the Shader background, glass surface, header geometry, fallback behavior, and responsive layout.
+
+  - id: report-navigation
+    label: Bilingual gallery navigation
+    order: 25
+    selection: when-applicable
+    apply_when: Use for bilingual pages or screenshot sets with multiple app or journey groups. Links should navigate screenshot groups, not analytical sections.
+    reference: references/components/report-navigation.md
+    assets:
+      - assets/components/report-navigation.css
+      - assets/components/report-navigation.js
+    ownership: This Skill owns sticky navigation, locale switching, persistence, and translation hooks.
+
+  - id: test-criteria
+    label: Test criteria card
+    order: 27
+    selection: when-applicable
+    apply_when: Use when a source brief, Markdown report, or user request provides explicit fixed test routes, dates, passenger or device setup, selection rules, price caveats, or comparable test inputs. Do not invent missing criteria.
+    reference: references/components/test-criteria.md
+    assets:
+      - assets/components/test-criteria.css
+    ownership: This Skill owns the single-card test-criteria layout, row separators, label and content alignment, section spacing, and mobile stacking.
+
+  - id: screenshot-viewer
+    label: Screenshot gallery viewer
+    order: 30
+    selection: required-when-screenshots-present
+    apply_when: Every page containing product or app screenshots.
+    excludes: Logos, decorative icons, avatars, and unrelated illustrations.
+    reference: references/components/screenshot-viewer.md
+    assets:
+      - assets/components/screenshot-viewer.css
+      - assets/components/screenshot-viewer.js
+    ownership: This Skill owns screenshot display, focused viewing, copy, download, and long-image behavior.
