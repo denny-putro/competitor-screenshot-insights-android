@@ -1,0 +1,228 @@
+:root {
+  --sv-width: 258px;
+  --sv-dialog-width: 375px;
+  --sv-long-height: 558px;
+  --sv-line: #dfe3e8;
+  --sv-muted: #667085;
+  --sv-ink: #182230;
+  --sv-paper: #ffffff;
+  --sv-surface: #f2f4f7;
+  --sv-accent: #2563eb;
+}
+
+.sv-viewer,
+.sv-viewer *,
+.sv-dialog,
+.sv-dialog * {
+  box-sizing: border-box;
+}
+
+.sv-viewer {
+  width: min(var(--sv-width), 100%);
+  min-width: 0;
+  margin: 0;
+  color: var(--sv-ink);
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+}
+
+.sv-viewer__frame {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  border: 1px solid var(--sv-line);
+  border-radius: 12px 12px 0 0;
+  outline: none;
+  background: var(--sv-surface);
+  cursor: zoom-in;
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.sv-viewer__frame:hover,
+.sv-viewer__frame:focus-visible {
+  border-color: color-mix(in srgb, var(--sv-accent) 68%, var(--sv-line));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--sv-accent) 14%, transparent);
+}
+
+.sv-viewer__scroll {
+  width: 100%;
+}
+
+.sv-viewer[data-sv-long="true"] .sv-viewer__frame,
+.sv-viewer[data-sv-long="true"] .sv-viewer__scroll {
+  height: var(--sv-long-height);
+}
+
+.sv-viewer[data-sv-long="true"] .sv-viewer__scroll {
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.sv-viewer__image {
+  display: block;
+  width: 100%;
+  max-width: none;
+  height: auto;
+  margin: 0;
+}
+
+.sv-viewer__fade {
+  position: absolute;
+  z-index: 2;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: none;
+  height: 72px;
+  pointer-events: none;
+  background: linear-gradient(to bottom, transparent, rgba(242, 244, 247, 0.94));
+  transition: opacity 150ms ease;
+}
+
+.sv-viewer[data-sv-long="true"] .sv-viewer__fade {
+  display: block;
+}
+
+.sv-viewer[data-sv-long="true"].sv-at-end .sv-viewer__fade {
+  opacity: 0;
+}
+
+.sv-viewer__toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 40px;
+  padding: 7px 8px 7px 10px;
+  border: 1px solid var(--sv-line);
+  border-top: 0;
+  border-radius: 0 0 12px 12px;
+  background: var(--sv-paper);
+}
+
+.sv-viewer__label {
+  overflow: hidden;
+  color: var(--sv-muted);
+  font-size: 12px;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sv-viewer__open,
+.sv-dialog__button,
+.sv-dialog__download {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-height: 30px;
+  padding: 5px 9px;
+  border: 1px solid var(--sv-line);
+  border-radius: 8px;
+  color: #344054;
+  background: var(--sv-paper);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.sv-viewer__open:hover,
+.sv-viewer__open:focus-visible,
+.sv-dialog__button:hover,
+.sv-dialog__button:focus-visible,
+.sv-dialog__download:hover,
+.sv-dialog__download:focus-visible {
+  border-color: var(--sv-accent);
+  color: var(--sv-accent);
+  outline: none;
+}
+
+.sv-dialog {
+  width: min(var(--sv-dialog-width), calc(100vw - 24px));
+  max-width: var(--sv-dialog-width);
+  max-height: 92vh;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: 14px;
+  background: var(--sv-paper);
+  box-shadow: 0 24px 80px rgba(16, 24, 40, 0.32);
+}
+
+.sv-dialog::backdrop {
+  background: rgba(10, 18, 31, 0.76);
+  backdrop-filter: blur(4px);
+}
+
+.sv-dialog__bar {
+  display: grid;
+  gap: 8px;
+  padding: 9px;
+  border-top: 1px solid var(--sv-line);
+  background: var(--sv-paper);
+}
+
+.sv-dialog__heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+
+.sv-dialog__title {
+  overflow: hidden;
+  font-size: 12px;
+  font-weight: 750;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sv-dialog__close {
+  flex: 0 0 auto;
+  width: 30px;
+  padding: 0;
+  font-size: 17px;
+}
+
+.sv-dialog__actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 7px;
+}
+
+.sv-dialog__status {
+  min-height: 16px;
+  color: var(--sv-muted);
+  font-size: 11px;
+  text-align: center;
+}
+
+.sv-dialog__body {
+  width: 100%;
+  max-height: calc(92vh - 108px);
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: var(--sv-surface);
+}
+
+.sv-dialog__image {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin: 0;
+}
+
+.sv-dialog__button:disabled {
+  cursor: progress;
+  opacity: 0.62;
+}

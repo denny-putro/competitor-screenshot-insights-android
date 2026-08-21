@@ -1,0 +1,48 @@
+:root {
+  --ink: #101828;
+  --muted: #667085;
+  --paper: #ffffff;
+  --canvas: #f4f5f7;
+  --radius-md: 18px;
+  --font-caption: 12px;
+  --font-small: 14px;
+  --font-body: 16px;
+  --font-title: 20px;
+  --font-display: 40px;
+  --font-display-mobile: 32px;
+  --line-caption: 18px;
+  --line-small: 22px;
+  --line-body: 26px;
+  --line-title: 28px;
+  --line-display: 1.2;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  color: var(--ink);
+  background: var(--canvas);
+  font-family:
+    system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+    "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  font-size: var(--font-small);
+  line-height: var(--line-small);
+}
+
+button {
+  font: inherit;
+}
+
+.shell {
+  width: min(1440px, calc(100% - 40px));
+  margin: 0 auto;
+}
+
+@media (max-width: 760px) {
+  .shell {
+    width: min(100% - 24px, 1440px);
+  }
+}

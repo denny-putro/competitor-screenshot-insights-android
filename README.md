@@ -1,20 +1,24 @@
-# Competitor Screenshot Insights
+# Competitor Research Skills
 
 **English** | [简体中文](README.zh-CN.md)
 
-> Turn a real iPhone into a reliable competitor-research assistant.
+> Capture competitor journeys on a real iPhone, then turn the evidence into a clear HTML gallery.
 
 **Public Beta · v0.2**
 
-Competitor Screenshot Insights explores apps on a physical device, reconstructs important user journeys, and delivers clear viewport screenshots, long screenshots, and ordered evidence packs. Whether you want to examine a specific feature or explore an unfamiliar product, it turns “take a look at this competitor” into a verifiable, reusable research process.
+This repository contains two installable Codex Skills: `competitor-screenshot-insights` explores apps on a physical device and captures ordered evidence; `build-competitor-report-html` turns screenshot evidence into a neutral, bilingual HTML gallery. Install either Skill independently or use them together as an end-to-end research workflow.
 
 It is designed for product managers, designers, researchers, and growth teams working on competitive analysis, experience comparisons, design reviews, opportunity discovery, and strategic reporting.
 
 ## Quick Start
 
-In Codex, ask the Agent to install the Skill from GitHub with the built-in `skill-installer`:
+In Codex, ask the Agent to install one or both Skills from GitHub with the built-in `skill-installer`:
 
 > Install `competitor-screenshot-insights` from `fengjunnan-web/competitor-screenshot-insights`, path `skills/competitor-screenshot-insights`.
+
+> Install `build-competitor-report-html` from `fengjunnan-web/competitor-screenshot-insights`, path `skills/build-competitor-report-html`.
+
+The report Skill is self-contained: its typography, Hero, navigation, test-criteria, and screenshot-viewer components are bundled as private modules. No additional component Skills are required. It can use evidence from `competitor-screenshot-insights` or screenshots collected elsewhere.
 
 On first use, the Skill runs a local preflight. The Agent reads and follows the [installation guide](skills/competitor-screenshot-insights/INSTALL.md) only when dependencies are missing or the configuration has changed. After a successful setup, it reuses a machine-local cache instead of repeating installation checks on every run.
 
@@ -66,7 +70,7 @@ They are universal, reusable product-research evidence. You can analyze product 
 
 The Skill preserves scenario, order, and context wherever possible so each screenshot supports judgment rather than merely looking presentable.
 
-It can also work with the optional `build-competitor-report-html` Skill to generate a default HTML report that organizes selected screenshots into a clear research narrative:
+It can also work with the included `build-competitor-report-html` Skill to generate a default HTML report that organizes selected screenshots into a clear research narrative:
 
 - Use the HTML report for quick review and sharing.
 - Use the original screenshot evidence for analysis with your own framework.

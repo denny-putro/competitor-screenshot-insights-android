@@ -1,0 +1,19 @@
+{
+  "page_kind": "competitor-report",
+  "required_meta": [
+    "codex-page-kind",
+    "codex-page-id",
+    "codex-page-title",
+    "codex-page-summary",
+    "codex-page-generated-at"
+  ],
+  "optional_meta": [
+    "codex-page-category",
+    "codex-page-icon"
+  ],
+  "constraints": {
+    "codex-page-kind": "competitor-report",
+    "codex-page-id": "Stable lower-case identifier using letters, digits, and hyphens",
+    "codex-page-generated-at": "ISO 8601 date or timestamp"
+  }
+}

@@ -3,6 +3,7 @@ set -eu
 
 REPO_ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 SKILL_ROOT="$REPO_ROOT/skills/competitor-screenshot-insights"
+REPORT_SKILL_ROOT="$REPO_ROOT/skills/build-competitor-report-html"
 
 for required in \
   "$REPO_ROOT/LICENSE" \
@@ -10,13 +11,18 @@ for required in \
   "$SKILL_ROOT/SKILL.md" \
   "$SKILL_ROOT/INSTALL.md" \
   "$SKILL_ROOT/scripts/preflight.sh" \
-  "$SKILL_ROOT/scripts/setup.sh"
+  "$SKILL_ROOT/scripts/setup.sh" \
+  "$REPORT_SKILL_ROOT/SKILL.md" \
+  "$REPORT_SKILL_ROOT/agents/openai.yaml" \
+  "$REPORT_SKILL_ROOT/scripts/validate_package.py"
 do
   if [ ! -f "$required" ]; then
     printf 'Missing required release file: %s\n' "$required" >&2
     exit 1
   fi
 done
+
+python3 "$REPORT_SKILL_ROOT/scripts/validate_package.py"
 
 if git -C "$REPO_ROOT" ls-files | grep -E '(^|/)(__pycache__/|\.DS_Store$|[^/]+\.pyc$)'; then
   printf '%s\n' 'Generated cache or metadata files are tracked.' >&2
@@ -33,4 +39,4 @@ then
   exit 1
 fi
 
-printf '%s\n' 'PASS: release files, privacy scan, and entrypoint contract'
+printf '%s\n' 'PASS: release files, privacy scan, and Skill entrypoint contracts'
