@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Resolve, discover, and verify named iPhone apps without bundle guessing."""
+"""Resolve, discover, and verify named Android apps without package guessing."""
 
 from __future__ import annotations
 
@@ -108,8 +108,11 @@ def parse_registry(path: Path) -> list[AppTarget]:
         if not all((target.app, target.bundle_id, target.visible_brand, target.verified)):
             raise RegistryError(f"Registry row has a required empty field: {line}")
         records.append(target)
-    if not records:
-        raise RegistryError("Registry has no app records")
+    # An empty table is a valid initial state on Android: package names are not
+    # derivable from the iOS registry, so every mapping must be earned on-device
+    # by the verified discovery flow. A miss here yields exit 3 (no mapping),
+    # which is precisely what routes the launch into that flow. The header
+    # columns are still required, so a malformed table remains invalid.
     validate_records(records)
     return records
 
@@ -198,15 +201,34 @@ def discover(app: str, registry: Path, inventory: Path) -> InstalledApp:
     return matches[0]
 
 
-def application_label(snapshot_path: Path) -> str:
+def application_label(snapshot_path: Path) -> tuple[str, str]:
+    """Observed app identity from a snapshot, with the kind of value returned.
+
+    Apple snapshots expose an `Application` node whose `label` is the app's
+    human-readable name, so it can be compared against the registry's visible
+    brand. Android snapshots contain no such node -- node types are Android
+    class names -- and report `appName`/`appBundleId` at the `data` level, both
+    of which are the PACKAGE name, not a brand.
+
+    Returns (value, kind) where kind is "brand" or "package". Callers must not
+    compare a "package" value against a brand column: that comparison would
+    always be package-vs-package and would silently reduce the identity gate to
+    a tautology. Compare it against the package instead, which still
+    cross-checks two independent CLI surfaces (appstate and snapshot).
+    """
     try:
         payload = json.loads(snapshot_path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as error:
         raise RegistryError(f"Unreadable snapshot: {error}") from error
-    for node in payload.get("data", {}).get("nodes", []):
+    data = payload.get("data", {})
+    for node in data.get("nodes", []):
         if node.get("type") == "Application" and isinstance(node.get("label"), str):
-            return node["label"]
-    raise RegistryError("Snapshot has no Application label")
+            return node["label"], "brand"
+    for key in ("appBundleId", "appName"):
+        value = data.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip(), "package"
+    raise RegistryError("Snapshot has no application identity")
 
 
 def foreground_bundle(appstate_path: Path) -> str:
@@ -214,9 +236,17 @@ def foreground_bundle(appstate_path: Path) -> str:
         text = appstate_path.read_text(encoding="utf-8")
     except OSError as error:
         raise RegistryError(f"Unreadable app state: {error}") from error
-    match = re.search(r"^Bundle:\s*(.+?)\s*$", text, flags=re.MULTILINE)
+    # Label differs by platform and output form:
+    #   Android text: "Foreground app: com.example.app" (no Bundle/Package line)
+    #   Apple text:   "Bundle: com.example.app"
+    # `Package:` is accepted too since the JSON form uses that key name.
+    # Accept any of them so the identity gate keeps comparing a real observed
+    # value instead of failing on a label name.
+    match = re.search(
+        r"^(?:Foreground app|Package|Bundle):\s*(.+?)\s*$", text, flags=re.MULTILINE
+    )
     if not match:
-        raise RegistryError("App state has no foreground bundle")
+        raise RegistryError("App state has no foreground package")
     return match.group(1)
 
 
@@ -233,12 +263,22 @@ def verify_observed(target: AppTarget, args: argparse.Namespace) -> tuple[Path, 
     if not screenshot.is_file():
         raise RegistryError(f"Screenshot not found: {screenshot}")
     foreground = foreground_bundle(Path(args.appstate))
-    observed_brand = application_label(Path(args.snapshot))
+    observed_brand, observed_kind = application_label(Path(args.snapshot))
     mismatch: dict[str, Any] = {}
     if foreground != target.bundle_id:
         mismatch["foreground_bundle"] = {"expected": target.bundle_id, "observed": foreground}
-    if normalize(observed_brand) != normalize(target.visible_brand):
-        mismatch["visible_brand"] = {"expected": target.visible_brand, "observed": observed_brand}
+    if observed_kind == "brand":
+        if normalize(observed_brand) != normalize(target.visible_brand):
+            mismatch["visible_brand"] = {"expected": target.visible_brand, "observed": observed_brand}
+    # Android: the snapshot reports a package, not a brand. Require it to agree
+    # with the registry package AND with the package appstate independently
+    # reported, so a stale or cross-bound session cannot pass this gate.
+    elif observed_brand != target.bundle_id or observed_brand != foreground:
+        mismatch["snapshot_package"] = {
+            "expected": target.bundle_id,
+            "observed": observed_brand,
+            "appstate_package": foreground,
+        }
     if mismatch:
         emit({"status": "identity_mismatch", "requested_app": args.app, "target": target.as_json(), "mismatch": mismatch})
         return None

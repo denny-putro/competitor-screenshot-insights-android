@@ -3,14 +3,14 @@ set -eu
 
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 SKILL_ROOT=$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd)
-SCHEMA_VERSION=4
+SCHEMA_VERSION=5
 CONFIG_LOADER="$SCRIPT_DIR/agent-device-env.sh"
 if [ -n "${CSI_AGENT_DEVICE_ENV:-}" ]; then
   CONFIG_FILE=$CSI_AGENT_DEVICE_ENV
 elif [ -n "${XDG_CONFIG_HOME:-}" ]; then
-  CONFIG_FILE="$XDG_CONFIG_HOME/competitor-screenshot-insights/agent-device-env.sh"
+  CONFIG_FILE="$XDG_CONFIG_HOME/competitor-screenshot-insights-android/agent-device-env.sh"
 elif [ -n "${HOME:-}" ]; then
-  CONFIG_FILE="$HOME/.config/competitor-screenshot-insights/agent-device-env.sh"
+  CONFIG_FILE="$HOME/.config/competitor-screenshot-insights-android/agent-device-env.sh"
 else
   printf '%s\n' '{"status":"error","reason":"config_location_unavailable"}'
   exit 2
@@ -34,9 +34,9 @@ esac
 if [ -n "${CSI_INSTALL_STATE:-}" ]; then
   STATE_FILE=$CSI_INSTALL_STATE
 elif [ -n "${XDG_STATE_HOME:-}" ]; then
-  STATE_FILE="$XDG_STATE_HOME/competitor-screenshot-insights/install-state.json"
+  STATE_FILE="$XDG_STATE_HOME/competitor-screenshot-insights-android/install-state.json"
 elif [ -n "${HOME:-}" ]; then
-  STATE_FILE="$HOME/.local/state/competitor-screenshot-insights/install-state.json"
+  STATE_FILE="$HOME/.local/state/competitor-screenshot-insights-android/install-state.json"
 else
   printf '%s\n' '{"status":"error","reason":"state_location_unavailable"}'
   exit 2
@@ -120,11 +120,16 @@ APP_TARGET_RESOLVER="$SCRIPT_DIR/resolve-target-app.py"
 APP_TARGET_OPENER="$SCRIPT_DIR/open-mapped-app.sh"
 APP_TARGET_GUARD="${AGENT_DEVICE_GUARD_BIN:-$SCRIPT_DIR/guard-bin}/agent-device"
 APP_BUNDLE_REGISTRY="$SKILL_ROOT/references/app-bundle-ids.md"
-XCODEBUILD_BIN="${DEVELOPER_DIR:-}/usr/bin/xcodebuild"
-if [ -x "${DEVELOPER_DIR:-}/usr/bin/xcrun" ]; then
-  XCRUN_BIN="${DEVELOPER_DIR:-}/usr/bin/xcrun"
+# Agent Device resolves adb through ANDROID_HOME, ANDROID_SDK_ROOT, or PATH.
+# When the configuration names an adb explicitly, check exactly that binary and
+# never fall back: substituting a different adb than the recorded one would hide
+# a broken configuration behind whichever adb happens to be on PATH.
+if [ -n "${CSI_ADB_BIN:-}" ]; then
+  ADB_BIN=$CSI_ADB_BIN
+elif [ -x "${ANDROID_HOME:-}/platform-tools/adb" ]; then
+  ADB_BIN="$ANDROID_HOME/platform-tools/adb"
 else
-  XCRUN_BIN=$(command -v xcrun 2>/dev/null || true)
+  ADB_BIN=$(command -v adb 2>/dev/null || true)
 fi
 
 require_executable "$NODE_BIN" node_missing
@@ -133,16 +138,11 @@ require_file "$APP_TARGET_RESOLVER" target_resolver_missing
 require_file "$APP_TARGET_OPENER" target_opener_missing
 require_executable "$APP_TARGET_GUARD" target_open_guard_missing
 require_file "$APP_BUNDLE_REGISTRY" app_bundle_registry_missing
-require_directory "${AGENT_DEVICE_XCODE_APP:-}" xcode_app_missing
-require_directory "${DEVELOPER_DIR:-}" developer_dir_missing
-require_executable "$XCODEBUILD_BIN" xcodebuild_missing
-require_executable "$XCRUN_BIN" xcrun_missing
+require_executable "$ADB_BIN" adb_missing
 require_directory "${SCREENSHOT_STITCHER_HOME:-}" screenshot_environment_missing
 require_executable "${SCREENSHOT_STITCHER_PYTHON:-}" screenshot_python_missing
 require_executable "${SCREENSHOT_STITCHER_BIN:-}" screenshot_stitcher_missing
 require_value "${AGENT_DEVICE_DEVICE:-}" device_configuration_missing
-require_value "${AGENT_DEVICE_IOS_TEAM_ID:-}" team_id_missing
-require_value "${AGENT_DEVICE_IOS_BUNDLE_ID:-}" runner_bundle_id_missing
 require_value "${AGENT_DEVICE_SESSION:-}" session_name_missing
 
 if { [ -n "${CSI_VIEWPORT_WIDTH:-}" ] && [ -z "${CSI_VIEWPORT_HEIGHT:-}" ]; } || \
@@ -150,8 +150,8 @@ if { [ -n "${CSI_VIEWPORT_WIDTH:-}" ] && [ -z "${CSI_VIEWPORT_HEIGHT:-}" ]; } ||
   add_reason coordinate_viewport_configuration_incomplete
 fi
 
-if [ "${AGENT_DEVICE_PLATFORM:-}" != ios ]; then
-  add_reason ios_platform_configuration_missing
+if [ "${AGENT_DEVICE_PLATFORM:-}" != android ]; then
+  add_reason android_platform_configuration_missing
 fi
 
 if [ -f "$APP_TARGET_RESOLVER" ] && [ -f "$APP_BUNDLE_REGISTRY" ] && ! "$SCREENSHOT_STITCHER_PYTHON" "$APP_TARGET_RESOLVER" --registry "$APP_BUNDLE_REGISTRY" validate >/dev/null 2>&1; then
@@ -212,8 +212,7 @@ fingerprint_material() {
   file_signatures \
     "$NODE_BIN" \
     "$AGENT_DEVICE_EXECUTABLE" \
-    "$XCODEBUILD_BIN" \
-    "$XCRUN_BIN" \
+    "$ADB_BIN" \
     "$SCREENSHOT_STITCHER_PYTHON" \
     "$SCREENSHOT_STITCHER_BIN"
 }
@@ -299,14 +298,11 @@ if ! "$SCREENSHOT_STITCHER_BIN" --help >/dev/null 2>&1; then
   add_reason screenshot_stitcher_unusable
 fi
 
-XCODE_VERSION=$("$XCODEBUILD_BIN" -version 2>/dev/null || true)
-if [ -z "$XCODE_VERSION" ]; then
-  add_reason xcode_version_unreadable
-fi
-
-IPHONEOS_SDK_VERSION=$("$XCRUN_BIN" --sdk iphoneos --show-sdk-version 2>/dev/null || true)
-if [ -z "$IPHONEOS_SDK_VERSION" ]; then
-  add_reason iphoneos_sdk_unavailable
+# Local version probe only. `adb version` starts no server and contacts no
+# phone; device reachability is checked later, after user approval.
+ADB_VERSION=$("$ADB_BIN" version 2>/dev/null | sed -n '1p' || true)
+if [ -z "$ADB_VERSION" ]; then
+  add_reason adb_version_unreadable
 fi
 
 if [ -n "$REASONS" ]; then
@@ -343,8 +339,7 @@ RECORDED_AT=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
   printf '    "node": "%s",\n' "$(json_string "$NODE_VERSION")"
   printf '    "agent_device": "%s",\n' "$(json_string "$AGENT_DEVICE_VERSION")"
   printf '    "python": "%s",\n' "$(json_string "$PYTHON_VERSION")"
-  printf '    "xcode": "%s",\n' "$(json_string "$XCODE_VERSION")"
-  printf '    "iphoneos_sdk": "%s"\n' "$(json_string "$IPHONEOS_SDK_VERSION")"
+  printf '    "adb": "%s"\n' "$(json_string "$ADB_VERSION")"
   printf '%s\n' '  }'
   printf '%s\n' '}'
 } > "$TEMP_STATE"

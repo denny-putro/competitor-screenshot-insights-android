@@ -14,8 +14,16 @@ import cv2
 import numpy as np
 
 
-os.environ.setdefault("CSI_VIEWPORT_WIDTH", "390")
-os.environ.setdefault("CSI_VIEWPORT_HEIGHT", "844")
+# setdefault() is not enough: the config loader exports these as EMPTY strings
+# when coordinate fallback is intentionally disabled, and an empty value would
+# leave the fallback "unconfigured" for tests that require it. Treat empty as
+# unset while still respecting a real configured value.
+for _viewport_name, _viewport_value in (
+    ("CSI_VIEWPORT_WIDTH", "390"),
+    ("CSI_VIEWPORT_HEIGHT", "844"),
+):
+    if not os.environ.get(_viewport_name):
+        os.environ[_viewport_name] = _viewport_value
 
 
 MODULE_PATH = (

@@ -1,4 +1,4 @@
-# Recording-Assisted Native iOS Long Screenshots
+# Recording-Assisted Native Android Long Screenshots
 
 Use this fast path only after `long-screenshot.md` selects it. Record controlled vertical scrolling, discover stable video intervals from the actual media timeline, extract one verified frame per settled page position, and pass those frames through the same probe, stitch, and QA checks as still screenshots.
 

@@ -60,9 +60,13 @@ class FastCaptureRoutingTests(unittest.TestCase):
         self.assertTrue(route["matched"])
         self.assertEqual("inactive_capture", route["action"])
 
-    def test_heartbeat_uses_content_free_runner_uptime_probe(self) -> None:
+    def test_heartbeat_uses_content_free_device_probe(self) -> None:
         command = MODULE.heartbeat_command("fixture-session")
-        self.assertEqual(["agent-device", "prepare", "ios-runner"], command[:3])
+        self.assertEqual(["agent-device", "devices", "--platform", "android"], command[:4])
+        # Android has no runner to prepare; the keepalive must stay content-free
+        # and must never name or open an app.
+        self.assertNotIn("prepare", command)
+        self.assertNotIn("open", command)
         self.assertNotIn("alert", command)
         self.assertNotIn("screenshot", command)
 
@@ -135,92 +139,76 @@ class FastCaptureStateTests(unittest.TestCase):
             kill.assert_not_called()
 
 
+USB_LINE = (
+    "1A2B3C4D       device usb:337641472X product:raven "
+    "model:Pixel_6_Pro device:raven transport_id:1"
+)
+NETWORK_LINE = (
+    "192.168.1.10:5555   device product:raven model:Pixel_6_Pro "
+    "device:raven transport_id:2"
+)
+UNAUTHORIZED_LINE = "9Z8Y7X    unauthorized usb:337641473X transport_id:4"
+OFFLINE_LINE = (
+    "5Q4R3S    offline usb:337641474X product:raven "
+    "model:Pixel_6_Pro device:raven transport_id:5"
+)
+
+
 class WiredConnectionGateTests(unittest.TestCase):
-    def completed_inventory(self, command: list[str], entries: list[dict]) -> subprocess.CompletedProcess[str]:
-        return subprocess.CompletedProcess(command, 0, json.dumps(entries), "")
+    def completed_devices(self, command: list[str], lines: list[str]) -> subprocess.CompletedProcess[str]:
+        output = "List of devices attached\n* daemon started successfully\n" + "\n".join(lines) + "\n"
+        return subprocess.CompletedProcess(command, 0, output, "")
 
-    def test_gate_accepts_xcode_usb_interface(self) -> None:
+    def gate(self, lines: list[str], *, device: str = "Pixel 6 Pro", serial: str = ""):
         def fake_run(command, label, **kwargs):
-            return self.completed_inventory(
-                command,
-                [
-                    {
-                        "name": "fixture-phone",
-                        "identifier": "fixture-id",
-                        "platform": "com.apple.platform.iphoneos",
-                        "available": True,
-                        "interface": "usb",
-                    }
-                ],
-            )
+            return self.completed_devices(command, lines)
 
+        # Pin CSI_ADB_BIN so the asserted command is identical whether or not the
+        # caller's environment already points at a real adb.
+        environment = {
+            "AGENT_DEVICE_DEVICE": device,
+            "AGENT_DEVICE_SERIAL": serial,
+            "CSI_ADB_BIN": "",
+        }
         with (
-            mock.patch.dict(os.environ, {"AGENT_DEVICE_DEVICE": "fixture-phone"}),
+            mock.patch.dict(os.environ, environment),
             mock.patch.object(MODULE, "run_command", side_effect=fake_run) as run,
         ):
-            connection = MODULE.verify_wired_device_connection()
+            return MODULE.verify_wired_device_connection(), run
 
-        self.assertEqual({"interface": "usb"}, connection)
-        self.assertEqual(
-            ["xcrun", "xcdevice", "list", "--timeout", "5"],
-            run.call_args.args[0],
-        )
+    def test_gate_accepts_usb_transport(self) -> None:
+        connection, run = self.gate([USB_LINE])
+        self.assertEqual({"interface": "usb", "serial": "1A2B3C4D"}, connection)
+        self.assertEqual(["adb", "devices", "-l"], run.call_args.args[0])
 
-    def test_gate_rejects_network_interface(self) -> None:
-        def fake_run(command, label, **kwargs):
-            return self.completed_inventory(
-                command,
-                [
-                    {
-                        "name": "fixture-phone",
-                        "identifier": "fixture-id",
-                        "platform": "com.apple.platform.iphoneos",
-                        "available": True,
-                        "interface": "network",
-                    }
-                ],
-            )
+    def test_gate_rejects_adb_over_network(self) -> None:
+        with self.assertRaisesRegex(MODULE.FastModeError, "USB transport"):
+            self.gate([NETWORK_LINE])
 
-        with (
-            mock.patch.dict(os.environ, {"AGENT_DEVICE_DEVICE": "fixture-phone"}),
-            mock.patch.object(MODULE, "run_command", side_effect=fake_run),
-        ):
-            with self.assertRaisesRegex(MODULE.FastModeError, "network.*usb"):
-                MODULE.verify_wired_device_connection()
+    def test_gate_reports_unauthorized_device_distinctly(self) -> None:
+        # A permission state the user must resolve on the phone, not a transport fault.
+        with self.assertRaisesRegex(MODULE.FastModeError, "unauthorized"):
+            self.gate([UNAUTHORIZED_LINE], device="9Z8Y7X")
 
-    def test_gate_can_match_exact_device_identifier(self) -> None:
-        def fake_run(command, label, **kwargs):
-            return self.completed_inventory(
-                command,
-                [
-                    {
-                        "name": "fixture-phone",
-                        "identifier": "fixture-id",
-                        "platform": "com.apple.platform.iphoneos",
-                        "available": True,
-                        "interface": "usb",
-                    }
-                ],
-            )
+    def test_gate_reports_offline_device_distinctly(self) -> None:
+        with self.assertRaisesRegex(MODULE.FastModeError, "offline"):
+            self.gate([OFFLINE_LINE])
 
-        with (
-            mock.patch.dict(os.environ, {"AGENT_DEVICE_DEVICE": "fixture-id"}),
-            mock.patch.object(MODULE, "run_command", side_effect=fake_run),
-        ):
-            connection = MODULE.verify_wired_device_connection()
+    def test_gate_rejects_ambiguous_match_without_serial(self) -> None:
+        with self.assertRaisesRegex(MODULE.FastModeError, "multiple matching"):
+            self.gate([USB_LINE, NETWORK_LINE])
 
-        self.assertEqual({"interface": "usb"}, connection)
+    def test_gate_can_match_exact_adb_serial(self) -> None:
+        connection, _ = self.gate([USB_LINE, NETWORK_LINE], serial="1A2B3C4D")
+        self.assertEqual({"interface": "usb", "serial": "1A2B3C4D"}, connection)
 
     def test_gate_fails_closed_when_device_is_missing(self) -> None:
-        def fake_run(command, label, **kwargs):
-            return self.completed_inventory(command, [])
+        with self.assertRaisesRegex(MODULE.FastModeError, "not visible"):
+            self.gate([USB_LINE], device="Galaxy S24")
 
-        with (
-            mock.patch.dict(os.environ, {"AGENT_DEVICE_DEVICE": "fixture-phone"}),
-            mock.patch.object(MODULE, "run_command", side_effect=fake_run),
-        ):
-            with self.assertRaisesRegex(MODULE.FastModeError, "not visible"):
-                MODULE.verify_wired_device_connection()
+    def test_gate_fails_closed_with_no_devices(self) -> None:
+        with self.assertRaisesRegex(MODULE.FastModeError, "not visible"):
+            self.gate([])
 
 
 class ForegroundSessionBindingTests(unittest.TestCase):
@@ -240,7 +228,7 @@ class ForegroundSessionBindingTests(unittest.TestCase):
                 "/fixture/agent-device",
                 "open",
                 "--platform",
-                "ios",
+                "android",
                 "--device",
                 "fixture-phone",
                 "--session",

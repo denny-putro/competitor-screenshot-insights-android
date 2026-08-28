@@ -1,3 +1,31 @@
+> ### Fork note — Android port
+>
+> This fork replaces the iPhone skill with an **Android** port that drives a
+> connected physical device over `adb`. `skills/competitor-screenshot-insights/`
+> is gone; `skills/competitor-screenshot-insights-android/` takes its place.
+>
+> The XCTest runner path is deleted rather than branched: Android needs no runner
+> signing, and the CLI's `prepare` only accepts `ios-runner`. No Xcode, Team ID,
+> provisioning, or certificate trust. Transport is adb over USB, wired only.
+>
+> Known limitation: the app-identity gate is **weaker than the iOS original**.
+> iOS confirms a human-readable brand from the accessibility layer's
+> `Application` node; Android exposes no such value, so the gate instead
+> cross-checks the package across two independent CLI surfaces (`appstate` and
+> `snapshot`) plus the registry. The bundled registry ships **empty** on purpose:
+> Android package names are not derivable from iOS bundle identifiers, and a
+> guess would defeat the wrong-app gate.
+>
+> Validated on a physical Huawei P30 (`ELE-L29`): 103 tests, plus a full journey
+> from app launch through search, results, fare selection, and the booking form.
+>
+> Note `AGENTS.md` is inherited from upstream and still designates *that*
+> repository as the canonical source for public Skill code; read it as upstream's
+> policy, not this fork's.
+>
+> Deploy locally with `sh deploy.sh` — Claude Code does not discover symlinked
+> skills, so the skill is installed by copy.
+
 # Competitor Research Skills
 
 **English** | [简体中文](README.zh-CN.md)

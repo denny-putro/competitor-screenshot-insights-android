@@ -1,0 +1,4 @@
+interface:
+  display_name: "Competitor Screenshot Insights"
+  short_description: "Run fast-mode or researched Android captures"
+  default_prompt: "Use $competitor-screenshot-insights-android to start fast screenshot mode or research my connected Android app with verified evidence."

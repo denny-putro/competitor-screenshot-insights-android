@@ -46,6 +46,22 @@ def parse_json_output(text: str, label: str) -> dict[str, Any]:
     return payload
 
 
+
+def agent_device_env(*, select_device: bool = False) -> dict[str, str]:
+    """Environment for an Agent Device invocation.
+
+    `AGENT_DEVICE_DEVICE` is recorded by setup for this Skill's own wired-device
+    gate, but the CLI also reads it as an implicit `--device` selector. Once a
+    session is bound to a device, any command still carrying that selector fails
+    with INVALID_ARGS ("already bound to session ... but this request selected
+    --device=..."). Device selection belongs to the session-creating `open`,
+    which passes `--device` explicitly, so every other call runs without it.
+    """
+    env = os.environ.copy()
+    if not select_device:
+        env.pop("AGENT_DEVICE_DEVICE", None)
+    return env
+
 def run_command(
     command: list[str],
     label: str,
@@ -60,6 +76,7 @@ def run_command(
             capture_output=True,
             check=False,
             timeout=timeout,
+            env=agent_device_env(),
         )
     except subprocess.TimeoutExpired as error:
         raise CaptureError(f"{label} timed out") from error
@@ -75,7 +92,7 @@ def state_path() -> Path:
         return Path(override).expanduser().resolve()
     state_root = os.environ.get("XDG_STATE_HOME")
     base = Path(state_root).expanduser() if state_root else Path.home() / ".local" / "state"
-    return (base / "codex" / "competitor-screenshot-insights" / "capture-ready.json").resolve()
+    return (base / "codex" / "competitor-screenshot-insights-android" / "capture-ready.json").resolve()
 
 
 def device_lock_path() -> Path:
@@ -177,7 +194,14 @@ def foreground_bundle(session: str) -> str:
     result = run_command(agent_command(session, "appstate"), "foreground app check")
     payload = parse_json_output(result.stdout, "foreground app check")
     data = payload.get("data") or {}
-    bundle = data.get("appBundleId") or data.get("appName")
+    # Android reports the foreground app as `package`; Apple platforms report
+    # `appBundleId`. Accept either so identity checks compare a real value.
+    bundle = (
+        data.get("package")
+        or data.get("appPackage")
+        or data.get("appBundleId")
+        or data.get("appName")
+    )
     if not isinstance(bundle, str) or not bundle.strip():
         raise CaptureError("foreground app check returned no bundle", EXIT_ERROR)
     return bundle.strip()

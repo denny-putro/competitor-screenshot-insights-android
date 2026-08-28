@@ -25,6 +25,32 @@ def run(*args: str) -> subprocess.CompletedProcess[str]:
     return run_with_registry(REGISTRY, *args)
 
 
+FIXTURE_REGISTRY_ROWS = """# Fixture Registry
+
+| App | Bundle ID | Visible brand | Aliases | Verified |
+|---|---|---|---|---|
+| Fixture Travel | `com.example.fixture.travel` | Fixture Travel | Fixture; FixtureTravel | 2026-01-01 |
+| Fixture Sibling | `com.example.fixture.sibling` | Fixture Sibling | Sibling | 2026-01-01 |
+"""
+
+
+def write_fixture_registry(path: Path) -> Path:
+    """Write a registry with known rows.
+
+    The shipped Android registry ships empty on purpose, so any test that needs
+    an already-mapped target must create its own rows rather than depend on
+    seeded real-brand entries.
+    """
+    path.write_text(FIXTURE_REGISTRY_ROWS, encoding="utf-8")
+    return path
+
+
+ANDROID_APPSTATE_TEXT = (
+    "Foreground app: {package}\n"
+    "Activity: {package}.MainActivity\n"
+)
+
+
 def write_inventory(path: Path, *apps: str) -> None:
     path.write_text(json.dumps({"success": True, "data": {"apps": list(apps)}}), encoding="utf-8")
 
@@ -84,13 +110,26 @@ class ResolveTargetAppTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(json.loads(result.stdout)["status"], "valid")
 
-    def test_canonical_and_aliases_resolve_to_distinct_ctrip_targets(self) -> None:
-        ctrip = run("resolve", "--app", "携程")
-        trip = run("resolve", "--app", "Trip.com")
-        self.assertEqual(ctrip.returncode, 0, ctrip.stderr)
-        self.assertEqual(trip.returncode, 0, trip.stderr)
-        self.assertEqual(json.loads(ctrip.stdout)["target"]["bundle_id"], "ctrip.com")
-        self.assertEqual(json.loads(trip.stdout)["target"]["bundle_id"], "com.ctrip.EBooking")
+    def test_canonical_and_aliases_resolve_to_distinct_targets(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            registry = write_fixture_registry(Path(directory) / "registry.md")
+            alias = run_with_registry(registry, "resolve", "--app", "Fixture")
+            canonical = run_with_registry(registry, "resolve", "--app", "Fixture Sibling")
+            self.assertEqual(alias.returncode, 0, alias.stderr)
+            self.assertEqual(canonical.returncode, 0, canonical.stderr)
+            self.assertEqual(
+                json.loads(alias.stdout)["target"]["bundle_id"], "com.example.fixture.travel"
+            )
+            self.assertEqual(
+                json.loads(canonical.stdout)["target"]["bundle_id"], "com.example.fixture.sibling"
+            )
+
+    def test_empty_shipped_registry_routes_every_named_app_to_discovery(self) -> None:
+        # The Android registry ships empty; a miss must fail closed to discovery
+        # rather than resolving to a guessed package.
+        result = run("resolve", "--app", "Fixture Travel")
+        self.assertEqual(result.returncode, 3)
+        self.assertEqual(json.loads(result.stdout)["status"], "unmapped")
 
     def test_unmapped_target_fails_closed(self) -> None:
         result = run("resolve", "--app", "Unknown travel app")
@@ -132,12 +171,19 @@ class ResolveTargetAppTests(unittest.TestCase):
             snapshot = root / "snapshot.json"
             manifest = root / "nested" / "target.json"
             screenshot.write_bytes(b"png")
-            appstate.write_text("Foreground app: ctrip.com\nBundle: ctrip.com\n", encoding="utf-8")
-            snapshot.write_text(json.dumps({"data": {"nodes": [{"type": "Application", "label": "携程旅行"}]}}), encoding="utf-8")
-            result = run(
+            registry = write_fixture_registry(root / "registry.md")
+            appstate.write_text(
+                "Foreground app: com.example.fixture.travel\n"
+                "Package: com.example.fixture.travel\n"
+                "Activity: com.example.fixture.travel/.MainActivity\n",
+                encoding="utf-8",
+            )
+            snapshot.write_text(json.dumps({"data": {"nodes": [{"type": "Application", "label": "Fixture Travel"}]}}), encoding="utf-8")
+            result = run_with_registry(
+                registry,
                 "verify",
                 "--app",
-                "携程旅行",
+                "Fixture Travel",
                 "--appstate",
                 str(appstate),
                 "--snapshot",
@@ -149,7 +195,69 @@ class ResolveTargetAppTests(unittest.TestCase):
             )
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertTrue(manifest.is_file())
-            self.assertEqual(json.loads(manifest.read_text(encoding="utf-8"))["observed"]["application_label"], "携程旅行")
+            self.assertEqual(json.loads(manifest.read_text(encoding="utf-8"))["observed"]["application_label"], "Fixture Travel")
+
+    def test_verify_accepts_real_android_appstate_and_snapshot_shapes(self) -> None:
+        # Formats observed on a physical Android device:
+        #   appstate text -> "Foreground app: <package>" (no Bundle/Package line)
+        #   snapshot json -> data.appBundleId/appName carry the PACKAGE, and no
+        #                    node of type "Application" exists at all.
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            registry = write_fixture_registry(root / "registry.md")
+            screenshot = root / "launch.png"; screenshot.write_bytes(b"png")
+            appstate = root / "appstate.txt"
+            snapshot = root / "snapshot.json"
+            manifest = root / "target.json"
+            package = "com.example.fixture.travel"
+            appstate.write_text(
+                ANDROID_APPSTATE_TEXT.format(package=package), encoding="utf-8"
+            )
+            snapshot.write_text(
+                json.dumps({
+                    "data": {
+                        "appName": package,
+                        "appBundleId": package,
+                        "nodes": [{"index": 0, "type": "android.widget.FrameLayout"}],
+                    }
+                }),
+                encoding="utf-8",
+            )
+            result = run_with_registry(
+                registry, "verify", "--app", "Fixture Travel",
+                "--appstate", str(appstate), "--snapshot", str(snapshot),
+                "--screenshot", str(screenshot), "--manifest", str(manifest),
+            )
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertTrue(manifest.is_file())
+
+    def test_verify_rejects_snapshot_package_disagreeing_with_appstate(self) -> None:
+        # Android has no brand label to compare, so the gate cross-checks the
+        # package reported by two independent surfaces. A stale or cross-bound
+        # session must not slip through.
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            registry = write_fixture_registry(root / "registry.md")
+            screenshot = root / "launch.png"; screenshot.write_bytes(b"png")
+            appstate = root / "appstate.txt"
+            snapshot = root / "snapshot.json"
+            manifest = root / "target.json"
+            appstate.write_text(
+                ANDROID_APPSTATE_TEXT.format(package="com.example.fixture.travel"),
+                encoding="utf-8",
+            )
+            snapshot.write_text(
+                json.dumps({"data": {"appBundleId": "com.example.fixture.sibling", "nodes": []}}),
+                encoding="utf-8",
+            )
+            result = run_with_registry(
+                registry, "verify", "--app", "Fixture Travel",
+                "--appstate", str(appstate), "--snapshot", str(snapshot),
+                "--screenshot", str(screenshot), "--manifest", str(manifest),
+            )
+            self.assertEqual(result.returncode, 5)
+            self.assertFalse(manifest.exists())
+            self.assertEqual(json.loads(result.stdout)["status"], "identity_mismatch")
 
     def test_verify_fails_on_brand_mismatch(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -159,12 +267,14 @@ class ResolveTargetAppTests(unittest.TestCase):
             snapshot = root / "snapshot.json"
             manifest = root / "target.json"
             screenshot.write_bytes(b"png")
-            appstate.write_text("Bundle: ctrip.com\n", encoding="utf-8")
-            snapshot.write_text(json.dumps({"data": {"nodes": [{"type": "Application", "label": "Trip.com"}]}}), encoding="utf-8")
-            result = run(
+            registry = write_fixture_registry(root / "registry.md")
+            appstate.write_text("Package: com.example.fixture.travel\n", encoding="utf-8")
+            snapshot.write_text(json.dumps({"data": {"nodes": [{"type": "Application", "label": "Fixture Sibling"}]}}), encoding="utf-8")
+            result = run_with_registry(
+                registry,
                 "verify",
                 "--app",
-                "携程旅行",
+                "Fixture Travel",
                 "--appstate",
                 str(appstate),
                 "--snapshot",
@@ -318,7 +428,7 @@ class ResolveTargetAppTests(unittest.TestCase):
                 check=False,
             )
             self.assertEqual(0, result.returncode, f"stdout={result.stdout}\nstderr={result.stderr}")
-            registry = private_config / "competitor-screenshot-insights" / "app-bundle-ids.md"
+            registry = private_config / "competitor-screenshot-insights-android" / "app-bundle-ids.md"
             self.assertTrue(registry.is_file())
             self.assertIn("Fresh Private App", registry.read_text(encoding="utf-8"))
             self.assertEqual(["apps", "open", "wait", "screenshot", "appstate", "snapshot"], command_log.read_text(encoding="utf-8").splitlines())

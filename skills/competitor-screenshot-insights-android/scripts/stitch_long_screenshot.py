@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate and stitch ordered physical-iPhone screenshots locally."""
+"""Validate and stitch ordered physical-Android screenshots locally."""
 
 from __future__ import annotations
 
@@ -16,9 +16,13 @@ import cv2
 import numpy as np
 
 
-PROFILES = {
+# Chrome crops are per-device calibration, not per-app constants: status bar,
+# navigation chrome, and density differ by Android device. The iOS skill's
+# profile was measured on a 1170x2532 iPhone and would crop the wrong regions
+# here, so it is deliberately absent. Add a profile only from crops measured on
+# the configured device, and override per run with --top-crop/--bottom-crop.
+PROFILES: dict[str, dict[str, int]] = {
     "generic": {},
-    "airbnb": {"top_crop": 240, "bottom_crop": 492, "x_margin": 40},
 }
 
 PAIR_PATTERN = re.compile(
@@ -31,9 +35,9 @@ PAIR_PATTERN = re.compile(
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Validate and stitch ordered iPhone screenshots with screenshot-stitcher."
+        description="Validate and stitch ordered Android screenshots with screenshot-stitcher."
     )
-    parser.add_argument("images", nargs="+", help="Ordered PNG screenshots from one iPhone.")
+    parser.add_argument("images", nargs="+", help="Ordered PNG screenshots from one Android device.")
     parser.add_argument("-o", "--output", required=True, help="Output PNG path.")
     parser.add_argument(
         "--profile", choices=sorted(PROFILES), default="generic", help="App chrome profile."

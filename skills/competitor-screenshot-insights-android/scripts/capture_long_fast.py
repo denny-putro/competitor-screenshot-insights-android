@@ -1783,7 +1783,13 @@ class Pipeline:
             )
             payload = parse_json_output(result.stdout, "appstate")
             data = payload.get("data") or {}
-            reported = data.get("appBundleId") or data.get("appName")
+            # Android reports `package`; Apple platforms report `appBundleId`.
+            reported = (
+                data.get("package")
+                or data.get("appPackage")
+                or data.get("appBundleId")
+                or data.get("appName")
+            )
             if reported != self.args.expected_bundle:
                 raise PipelineError(
                     f"Target bundle changed before pipeline: expected {self.args.expected_bundle}, got {reported}"

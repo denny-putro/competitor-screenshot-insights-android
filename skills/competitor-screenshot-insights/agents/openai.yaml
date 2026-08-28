@@ -1,4 +1,0 @@
-interface:
-  display_name: "Competitor Screenshot Insights"
-  short_description: "Run fast-mode or researched iPhone captures"
-  default_prompt: "Use $competitor-screenshot-insights to start fast screenshot mode or research my connected iPhone app with verified evidence."

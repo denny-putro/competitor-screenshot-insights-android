@@ -100,7 +100,7 @@ For recording-assisted capture, apply this command to each dynamically selected 
 
 The unified fast pipeline delegates this loop to `scripts/select-scroll-segments.sh`. Base-gesture frames must pass fast probe validation. A safety-gesture frame is excluded without validation when base-frame offsets already cover the expected progress; otherwise it must additionally meet the stronger matched-overlap threshold before it can be numbered as a segment.
 
-The default pan begins at the horizontal center shared by the app viewport and the selected scroll container, keeping it away from iOS edge gestures. During recording-assisted selection, a semantic height estimate may be overridden only after at least one positive accepted scroll and two visual terminal signals: a later extracted position has no progress and the final bottom screenshot also has no progress. A duplicate bottom screenshot alone is not enough when measured coverage remains below the estimate.
+The default pan begins at the horizontal center shared by the app viewport and the selected scroll container, keeping it away from Android edge gestures. During recording-assisted selection, a semantic height estimate may be overridden only after at least one positive accepted scroll and two visual terminal signals: a later extracted position has no progress and the final bottom screenshot also has no progress. A duplicate bottom screenshot alone is not enough when measured coverage remains below the estimate.
 
 ## QA a stitched output
 

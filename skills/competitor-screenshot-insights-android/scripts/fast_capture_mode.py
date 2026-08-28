@@ -108,7 +108,7 @@ def state_path() -> Path:
         return Path(override).expanduser().resolve()
     state_root = os.environ.get("XDG_STATE_HOME")
     base = Path(state_root).expanduser() if state_root else Path.home() / ".local" / "state"
-    return (base / "codex" / "competitor-screenshot-insights" / "fast-capture-mode.json").resolve()
+    return (base / "codex" / "competitor-screenshot-insights-android" / "fast-capture-mode.json").resolve()
 
 
 def state_lock_path() -> Path:
@@ -211,9 +211,37 @@ def route_current(message: str) -> dict[str, Any]:
         return route_message(message, payload)
 
 
-def run_command(command: list[str], label: str, timeout: float = 45.0) -> subprocess.CompletedProcess[str]:
+
+def agent_device_env(*, select_device: bool = False) -> dict[str, str]:
+    """Environment for an Agent Device invocation.
+
+    `AGENT_DEVICE_DEVICE` is recorded by setup for this Skill's own wired-device
+    gate, but the CLI also reads it as an implicit `--device` selector. Once a
+    session is bound to a device, any command still carrying that selector fails
+    with INVALID_ARGS ("already bound to session ... but this request selected
+    --device=..."). Device selection belongs to the session-creating `open`,
+    which passes `--device` explicitly, so every other call runs without it.
+    """
+    env = os.environ.copy()
+    if not select_device:
+        env.pop("AGENT_DEVICE_DEVICE", None)
+    return env
+
+def run_command(
+    command: list[str],
+    label: str,
+    timeout: float = 45.0,
+    env: dict[str, str] | None = None,
+) -> subprocess.CompletedProcess[str]:
     try:
-        result = subprocess.run(command, text=True, capture_output=True, check=False, timeout=timeout)
+        result = subprocess.run(
+            command,
+            text=True,
+            capture_output=True,
+            check=False,
+            timeout=timeout,
+            env=env if env is not None else agent_device_env(),
+        )
     except subprocess.TimeoutExpired as error:
         raise FastModeError(f"{label} timed out") from error
     if result.returncode != 0:
@@ -236,66 +264,97 @@ def parse_command_json(result: subprocess.CompletedProcess[str], label: str) -> 
     return payload
 
 
+def adb_binary() -> str:
+    return os.environ.get("CSI_ADB_BIN", "").strip() or "adb"
+
+
+def normalize_device_name(value: str) -> str:
+    # adb reports model/device tokens with underscores for spaces.
+    return value.replace("_", " ").strip().casefold()
+
+
+def parse_adb_devices(output: str) -> list[dict[str, str]]:
+    entries: list[dict[str, str]] = []
+    for line in output.splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("List of devices"):
+            continue
+        if stripped.startswith("*"):  # daemon startup chatter
+            continue
+        fields = stripped.split()
+        if len(fields) < 2:
+            continue
+        entry = {"serial": fields[0], "state": fields[1]}
+        for token in fields[2:]:
+            key, separator, value = token.partition(":")
+            if separator:
+                entry[key] = value
+        entries.append(entry)
+    return entries
+
+
 def verify_wired_device_connection() -> dict[str, str]:
     device = os.environ.get("AGENT_DEVICE_DEVICE", "").strip()
-    if not device:
+    serial = os.environ.get("AGENT_DEVICE_SERIAL", "").strip()
+    if not device and not serial:
         raise FastModeError(
-            "wired iPhone connection check requires AGENT_DEVICE_DEVICE; "
-            "connect the iPhone by USB and configure its device identifier"
+            "wired Android connection check requires AGENT_DEVICE_DEVICE or AGENT_DEVICE_SERIAL; "
+            "connect the device by USB and configure its identifier"
         )
     result = run_command(
-        ["xcrun", "xcdevice", "list", "--timeout", "5"],
-        "wired iPhone connection check",
-        timeout=10.0,
+        [adb_binary(), "devices", "-l"],
+        "wired Android connection check",
+        timeout=20.0,
     )
-    output = (result.stdout or result.stderr).strip()
-    start = output.find("[")
-    try:
-        inventory = json.loads(output[start:]) if start >= 0 else None
-    except json.JSONDecodeError as error:
-        raise FastModeError("wired iPhone connection check returned invalid Xcode device data") from error
-    if not isinstance(inventory, list):
-        raise FastModeError("wired iPhone connection check returned invalid Xcode device data")
-    candidates = [
-        entry
-        for entry in inventory
-        if isinstance(entry, dict)
-        and entry.get("platform") == "com.apple.platform.iphoneos"
-        and (entry.get("name") == device or entry.get("identifier") == device)
-    ]
-    exact_identifier = [entry for entry in candidates if entry.get("identifier") == device]
-    if len(exact_identifier) == 1:
-        selected = exact_identifier[0]
-    elif len(candidates) == 1:
-        selected = candidates[0]
-    else:
-        usb_candidates = [
-            entry
-            for entry in candidates
-            if entry.get("available") is True
-            and str(entry.get("interface", "")).strip().lower() == "usb"
-        ]
-        if len(usb_candidates) == 1:
-            selected = usb_candidates[0]
-        elif len(candidates) > 1:
-            raise FastModeError(
-                "wired iPhone connection check found multiple matching Xcode devices; "
-                "configure AGENT_DEVICE_DEVICE with the exact device identifier"
-            )
-        else:
-            selected = None
-    if selected is None:
-        raise FastModeError(
-            "configured iPhone is not visible in Xcode's device inventory; "
-            "connect it by USB, unlock it, and retry"
+    entries = parse_adb_devices(result.stdout or result.stderr or "")
+
+    # Surface the two states a user must physically resolve before anything else.
+    def matches(entry: dict[str, str]) -> bool:
+        if serial:
+            return entry.get("serial") == serial
+        if entry.get("serial") == device:
+            return True
+        wanted = normalize_device_name(device)
+        return any(
+            normalize_device_name(entry.get(key, "")) == wanted
+            for key in ("model", "device", "product")
         )
-    interface = str(selected.get("interface", "")).strip().lower()
-    if selected.get("available") is not True or interface != "usb":
+
+    named = [entry for entry in entries if matches(entry)]
+    unauthorized = [entry for entry in named if entry.get("state") == "unauthorized"]
+    if unauthorized:
         raise FastModeError(
-            f"Xcode reports the iPhone interface as {interface or 'unknown'!r}, not 'usb'; "
-            "connect it by USB before enabling fast capture mode"
+            "Android device is connected but unauthorized; accept the USB debugging "
+            "prompt on the device screen, then retry"
         )
-    return {"interface": interface}
+    offline = [entry for entry in named if entry.get("state") == "offline"]
+    if offline and not [entry for entry in named if entry.get("state") == "device"]:
+        raise FastModeError(
+            "Android device is reporting 'offline'; reconnect the cable, unlock the device, and retry"
+        )
+
+    ready = [entry for entry in named if entry.get("state") == "device"]
+    if len(ready) > 1:
+        raise FastModeError(
+            "wired Android connection check found multiple matching devices; "
+            "configure AGENT_DEVICE_SERIAL with the exact adb serial"
+        )
+    if not ready:
+        raise FastModeError(
+            "configured Android device is not visible to adb; "
+            "connect it by USB, unlock it, enable USB debugging, and retry"
+        )
+
+    selected = ready[0]
+    # adb reports a `usb:` token only for cable-attached transports; adb-over-network
+    # serials arrive as host:port instead. Fast mode is wired-only by design.
+    if "usb" not in selected:
+        raise FastModeError(
+            "adb does not report a USB transport for the configured device "
+            f"(serial {selected.get('serial', 'unknown')!r}); "
+            "connect it by cable before enabling fast capture mode"
+        )
+    return {"interface": "usb", "serial": selected.get("serial", "")}
 
 
 def agent_device_binary() -> str:
@@ -331,7 +390,7 @@ def session_generation(entry: dict[str, Any] | None) -> str | None:
 
 
 def foreground_session_open_command(session: str) -> list[str]:
-    command = agent_device_command("open", "--platform", "ios")
+    command = agent_device_command("open", "--platform", "android")
     device = os.environ.get("AGENT_DEVICE_DEVICE", "").strip()
     if device:
         command.extend(["--device", device])
@@ -372,7 +431,15 @@ def ensure_foreground_session(
     )
     payload = parse_command_json(result, "verify current foreground session")
     data = payload.get("data") or {}
-    bundle = data.get("appBundleId") or data.get("appName")
+    # Android `appstate --json` reports the foreground app as `package`; Apple
+    # platforms report `appBundleId`. Accept either so the identity check keeps
+    # comparing a real observed value instead of failing on a key name.
+    bundle = (
+        data.get("package")
+        or data.get("appPackage")
+        or data.get("appBundleId")
+        or data.get("appName")
+    )
     if not isinstance(bundle, str) or not bundle.strip():
         raise FastModeError("current foreground session returned no app identity")
     return {
@@ -382,15 +449,16 @@ def ensure_foreground_session(
 
 
 def heartbeat_command(session: str) -> list[str]:
-    del session  # Runner preparation is device-scoped; the foreground app session is untouched.
+    del session  # Device-scoped probe; the foreground app session is untouched.
+    # Android needs no XCTest runner, so there is nothing to build or sign and no
+    # `prepare` equivalent. A device enumeration is the content-free keepalive:
+    # it names no app, opens nothing, and cannot switch or relaunch the
+    # foreground app.
     return [
         "agent-device",
-        "prepare",
-        "ios-runner",
+        "devices",
         "--platform",
-        "ios",
-        "--timeout",
-        "90000",
+        "android",
         "--json",
     ]
 
@@ -436,7 +504,7 @@ def activate(session: str) -> dict[str, Any]:
     try:
         with file_lock(device_lock_path()):
             connection = verify_wired_device_connection()
-            run_command(heartbeat_command(session), "Runner warm-up", timeout=100.0)
+            run_command(heartbeat_command(session), "device transport warm-up", timeout=100.0)
             binding = ensure_foreground_session(
                 session,
                 expected_generation=(
@@ -557,7 +625,7 @@ def capture(message: str, output: str, work_dir: str | None, session: str, max_r
                 force_rebind=route["mode"] in {"long", "full"},
             )
             record_session_binding(session, binding)
-            env = os.environ.copy()
+            env = agent_device_env()
             env["CSI_DEVICE_LOCK_HELD"] = "1"
             result = subprocess.run(command, text=True, capture_output=True, check=False, env=env)
     except FastModeError:

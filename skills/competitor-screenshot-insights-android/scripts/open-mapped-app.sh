@@ -31,13 +31,22 @@ if [ ! -f "$ENV_FILE" ]; then
 fi
 . "$ENV_FILE"
 
+# `AGENT_DEVICE_DEVICE` is configuration for this Skill's own device gate, but
+# the CLI also reads it as an implicit `--device` selector. Once a session is
+# bound to a device, any command still carrying that selector fails with
+# INVALID_ARGS. Run every Agent Device call without it; the session identifies
+# the target after `open`.
+ad() {
+  env -u AGENT_DEVICE_DEVICE agent-device "$@"
+}
+
 if [ -z "$REGISTRY" ]; then
   if [ -n "${CSI_APP_BUNDLE_REGISTRY:-}" ]; then
     REGISTRY=$CSI_APP_BUNDLE_REGISTRY
   elif [ -n "${XDG_CONFIG_HOME:-}" ]; then
-    REGISTRY="$XDG_CONFIG_HOME/competitor-screenshot-insights/app-bundle-ids.md"
+    REGISTRY="$XDG_CONFIG_HOME/competitor-screenshot-insights-android/app-bundle-ids.md"
   elif [ -n "${HOME:-}" ]; then
-    REGISTRY="$HOME/.config/competitor-screenshot-insights/app-bundle-ids.md"
+    REGISTRY="$HOME/.config/competitor-screenshot-insights-android/app-bundle-ids.md"
   else
     printf '%s\n' 'Unable to resolve the local App registry location.' >&2
     exit 2
@@ -76,7 +85,7 @@ trap 'rm -f "$STATE_FILE" "$SNAPSHOT_FILE" "$INVENTORY_FILE"' EXIT HUP INT TERM
 
 if [ "$MODE" = discover ]; then
   INVENTORY_FILE=$(mktemp)
-  agent-device apps --json > "$INVENTORY_FILE"
+  ad apps --json > "$INVENTORY_FILE"
   if DISCOVERY=$("$SCREENSHOT_STITCHER_PYTHON" "$RESOLVER" --registry "$REGISTRY" discover --app "$TARGET_APP" --inventory "$INVENTORY_FILE"); then
     :
   else
@@ -87,11 +96,14 @@ if [ "$MODE" = discover ]; then
   BUNDLE_ID=$(printf '%s' "$DISCOVERY" | "$SCREENSHOT_STITCHER_PYTHON" -c 'import json, sys; print(json.load(sys.stdin)["candidate"]["bundle_id"])')
 fi
 
-"$AGENT_DEVICE_RAW_BIN" open "$BUNDLE_ID"
-agent-device wait 1000
-agent-device screenshot "$SCREENSHOT" --normalize-status-bar
-agent-device appstate > "$STATE_FILE"
-agent-device snapshot --json > "$SNAPSHOT_FILE"
+env -u AGENT_DEVICE_DEVICE "$AGENT_DEVICE_RAW_BIN" open "$BUNDLE_ID"
+ad wait 1000
+# Android capture keeps Agent Device's default demo-mode/status-bar
+# stabilization. --normalize-status-bar is iOS-simulator-only, and
+# --no-stabilize would trade deterministic chrome for latency.
+ad screenshot "$SCREENSHOT"
+ad appstate > "$STATE_FILE"
+ad snapshot --json > "$SNAPSHOT_FILE"
 if [ "$MODE" = registered ]; then
   "$SCREENSHOT_STITCHER_PYTHON" "$RESOLVER" --registry "$REGISTRY" verify \
     --app "$TARGET_APP" \

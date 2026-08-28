@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Deterministic checks for physical-iPhone screenshot workflows."""
+"""Deterministic checks for physical-Android screenshot workflows."""
 
 from __future__ import annotations
 
@@ -456,7 +456,14 @@ def check_target_app(args: argparse.Namespace) -> int:
     if result.returncode != 0:
         raise CheckError(f"agent-device appstate failed: {result.stdout.strip()}")
     state = parse_appstate_json(result.stdout)
-    reported_bundle = state.get("appBundleId") or state.get("appName")
+    # Android reports the foreground app as `package`; Apple platforms report
+    # `appBundleId`. Accept either so identity checks compare a real value.
+    reported_bundle = (
+        state.get("package")
+        or state.get("appPackage")
+        or state.get("appBundleId")
+        or state.get("appName")
+    )
     source = state.get("source") or "unknown"
     expected_match = (
         None if args.expected_bundle is None else reported_bundle == args.expected_bundle

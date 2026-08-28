@@ -13,6 +13,39 @@ import unittest
 SKILL_ROOT = Path(__file__).resolve().parents[1]
 PREFLIGHT = SKILL_ROOT / "scripts" / "preflight.sh"
 
+# Variables the config loader exports. `preflight.sh` sources that loader before
+# it runs this suite, so a test that inherits them would exercise the caller's
+# real toolchain instead of its own fixtures. Scrub them to keep tests hermetic.
+LEAKED_ENV_VARS = (
+    "AGENT_DEVICE_BIN",
+    "AGENT_DEVICE_DEVICE",
+    "AGENT_DEVICE_GUARD_BIN",
+    "AGENT_DEVICE_NODE_BIN",
+    "AGENT_DEVICE_PLATFORM",
+    "AGENT_DEVICE_RAW_BIN",
+    "AGENT_DEVICE_SERIAL",
+    "AGENT_DEVICE_SESSION",
+    "ANDROID_HOME",
+    "ANDROID_SDK_ROOT",
+    "CSI_ADB_BIN",
+    "CSI_AGENT_DEVICE_ENV",
+    "CSI_APP_BUNDLE_REGISTRY",
+    "CSI_INSTALL_STATE",
+    "CSI_VIEWPORT_HEIGHT",
+    "CSI_VIEWPORT_WIDTH",
+    "SCREENSHOT_STITCHER_BIN",
+    "SCREENSHOT_STITCHER_HOME",
+    "SCREENSHOT_STITCHER_PYTHON",
+)
+
+
+def clean_environment() -> dict[str, str]:
+    environment = os.environ.copy()
+    for name in LEAKED_ENV_VARS:
+        environment.pop(name, None)
+    return environment
+
+
 
 class PreflightTests(unittest.TestCase):
     def setUp(self) -> None:
@@ -20,8 +53,8 @@ class PreflightTests(unittest.TestCase):
         self.root = Path(self.tempdir.name)
         self.node_dir = self.root / "node-bin"
         self.agent_dir = self.root / "agent-bin"
-        self.xcode_app = self.root / "Xcode.app"
-        self.developer_dir = self.xcode_app / "Contents" / "Developer"
+        self.android_sdk = self.root / "android-sdk"
+        self.adb_bin = self.android_sdk / "platform-tools" / "adb"
         self.stitcher_home = self.root / "screenshot-stitcher"
         self.state_file = self.root / "state" / "install-state.json"
         self.config_file = self.root / "agent-device-env.sh"
@@ -35,12 +68,8 @@ class PreflightTests(unittest.TestCase):
             "#!/bin/sh\nprintf '%s\\n' '0.20.0'\n",
         )
         self._write_executable(
-            self.developer_dir / "usr" / "bin" / "xcodebuild",
-            "#!/bin/sh\nprintf '%s\\n' 'Xcode 26.6' 'Build version TEST'\n",
-        )
-        self._write_executable(
-            self.developer_dir / "usr" / "bin" / "xcrun",
-            "#!/bin/sh\nprintf '%s\\n' '26.5'\n",
+            self.adb_bin,
+            "#!/bin/sh\nprintf '%s\\n' 'Android Debug Bridge version 1.0.41' 'Version 35.0.2'\n",
         )
         self._write_executable(
             self.stitcher_home / "bin" / "python",
@@ -68,22 +97,21 @@ class PreflightTests(unittest.TestCase):
         values = {
             "AGENT_DEVICE_NODE_BIN": self.node_dir,
             "AGENT_DEVICE_BIN": self.agent_dir,
-            "AGENT_DEVICE_XCODE_APP": self.xcode_app,
-            "DEVELOPER_DIR": self.developer_dir,
+            "ANDROID_HOME": self.android_sdk,
+            "ANDROID_SDK_ROOT": self.android_sdk,
+            "CSI_ADB_BIN": self.adb_bin,
             "SCREENSHOT_STITCHER_HOME": self.stitcher_home,
             "SCREENSHOT_STITCHER_PYTHON": self.stitcher_home / "bin" / "python",
             "SCREENSHOT_STITCHER_BIN": self.stitcher_home / "bin" / "screenshot-stitcher",
-            "AGENT_DEVICE_PLATFORM": "ios",
-            "AGENT_DEVICE_DEVICE": "Fixture iPhone",
-            "AGENT_DEVICE_IOS_TEAM_ID": "FIXTURETEAM",
-            "AGENT_DEVICE_IOS_BUNDLE_ID": "dev.fixture.runner",
+            "AGENT_DEVICE_PLATFORM": "android",
+            "AGENT_DEVICE_DEVICE": "Fixture Pixel",
             "AGENT_DEVICE_SESSION": "fixture-session",
         }
         lines = [f"export {key}={shlex.quote(str(value))}" for key, value in values.items()]
         self.config_file.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
     def _run(self, *arguments: str) -> subprocess.CompletedProcess[str]:
-        environment = os.environ.copy()
+        environment = clean_environment()
         environment.update(
             {
                 "CSI_AGENT_DEVICE_ENV": str(self.config_file),
@@ -139,6 +167,27 @@ class PreflightTests(unittest.TestCase):
         self.assertEqual(10, result.returncode, result.stderr)
         payload = json.loads(result.stdout)
         self.assertIn("agent_device_missing", payload["reasons"])
+        self.assertFalse(self.state_file.exists())
+
+    def test_missing_adb_is_reported_without_state_write(self) -> None:
+        self.adb_bin.unlink()
+        result = self._run("--record")
+        self.assertEqual(10, result.returncode, result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertIn("adb_missing", payload["reasons"])
+        self.assertFalse(self.state_file.exists())
+
+    def test_non_android_platform_configuration_is_rejected(self) -> None:
+        # A configuration copied from the iOS skill must not silently pass here.
+        contents = self.config_file.read_text(encoding="utf-8")
+        self.config_file.write_text(
+            contents.replace("AGENT_DEVICE_PLATFORM=android", "AGENT_DEVICE_PLATFORM=ios"),
+            encoding="utf-8",
+        )
+        result = self._run("--record")
+        self.assertEqual(10, result.returncode, result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertIn("android_platform_configuration_missing", payload["reasons"])
         self.assertFalse(self.state_file.exists())
 
 

@@ -2,7 +2,7 @@
 set -eu
 
 REPO_ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
-SKILL_ROOT="$REPO_ROOT/skills/competitor-screenshot-insights"
+SKILL_ROOT="$REPO_ROOT/skills/competitor-screenshot-insights-android"
 REPORT_SKILL_ROOT="$REPO_ROOT/skills/build-competitor-report-html"
 
 for required in \

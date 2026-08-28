@@ -1,4 +1,4 @@
-# Native iOS Long Screenshots
+# Native Android Long Screenshots
 
 Use this procedure when the user requests a full-page or long screenshot, or proactively when continuous multi-screen evidence adds material value to the task. Agent Device's native `--full` support is for web content, so capture overlapping physical-device frames and stitch them deterministically.
 
@@ -32,7 +32,7 @@ Choose the capture path before scrolling:
 
 In fast mode, `sh scripts/capture-long-fast.sh` makes this capability decision from structural and height evidence. It also applies the approved extent without taking another semantic snapshot. If the semantic snapshot times out, contains no nodes, or returns a `0×0` root, it records that reason and switches to a generic coordinate plan for the configured device rather than an app/page profile. Its adaptive still path uses a conservative vertical gesture, preserves overlap, accepts only visually verified vertical progress, stops at the approved progress target, and otherwise requires two successive no-progress probes when semantics cannot prove the bottom. Use the manual still procedure below only for diagnosis or a targeted fallback.
 
-Default vertical gestures begin at the horizontal center shared by the app viewport and the selected scroll container, outside the iOS edge-gesture zones. For recording-assisted capture, an accepted positive scroll followed by both a no-progress extracted position and a no-progress bottom screenshot may establish the actual bottom when the semantic height estimate is too large.
+Default vertical gestures begin at the horizontal center shared by the app viewport and the selected scroll container, outside the Android edge-gesture zones (left-edge back, bottom home/app-switcher). For recording-assisted capture, an accepted positive scroll followed by both a no-progress extracted position and a no-progress bottom screenshot may establish the actual bottom when the semantic height estimate is too large.
 
 ## Capture still frames
 
@@ -71,8 +71,7 @@ Profiles:
 
 | Profile | Top crop | Bottom crop | Use |
 |---|---:|---:|---|
-| `generic` | CLI default | CLI default | Unknown native apps; tune after the first result |
-| `airbnb` | 240 px | 492 px | Airbnb on the configured 1170×2532-pixel iPhone; verified 2026-07-15 |
+| `generic` | CLI default | CLI default | All apps; the only shipped profile. Tune with `--top-crop`/`--bottom-crop` after the first result, since Android chrome heights are per-device |
 
 Override a profile with `--top-crop`, `--bottom-crop`, or `--x-margin` when fixed UI differs.
 
