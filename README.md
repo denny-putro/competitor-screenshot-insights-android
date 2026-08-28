@@ -1,54 +1,65 @@
 > ### Fork note — Android port
 >
-> This fork replaces the iPhone skill with an **Android** port that drives a
-> connected physical device over `adb`. `skills/competitor-screenshot-insights/`
-> is gone; `skills/competitor-screenshot-insights-android/` takes its place.
+> Derived from [`fengjunnan-web/competitor-screenshot-insights`](https://github.com/fengjunnan-web/competitor-screenshot-insights)
+> (MIT), which targets a physical **iPhone**. This fork replaces that Skill with an
+> **Android** port: `skills/competitor-screenshot-insights/` is gone and
+> `skills/competitor-screenshot-insights-android/` takes its place. The rename is
+> required — `validate_skill.py` enforces that a Skill's `name:` matches its folder.
 >
-> The XCTest runner path is deleted rather than branched: Android needs no runner
-> signing, and the CLI's `prepare` only accepts `ios-runner`. No Xcode, Team ID,
-> provisioning, or certificate trust. Transport is adb over USB, wired only.
+> The upstream commit history is intact, so the port is one reviewable diff:
+> `git log --oneline` shows it directly above upstream's own commits.
 >
-> Known limitation: the app-identity gate is **weaker than the iOS original**.
-> iOS confirms a human-readable brand from the accessibility layer's
-> `Application` node; Android exposes no such value, so the gate instead
-> cross-checks the package across two independent CLI surfaces (`appstate` and
-> `snapshot`) plus the registry. The bundled registry ships **empty** on purpose:
-> Android package names are not derivable from iOS bundle identifiers, and a
-> guess would defeat the wrong-app gate.
+> **Known limitation.** The app-identity gate is weaker than upstream's. iOS confirms
+> a human-readable brand from the accessibility layer's `Application` node; Android
+> exposes no such value, so the gate instead cross-checks the package across two
+> independent CLI surfaces (`appstate` and `snapshot`) plus the registry. The bundled
+> registry ships **empty** on purpose: Android package names are not derivable from
+> iOS bundle identifiers, and a guess would defeat the wrong-app gate.
 >
-> Validated on a physical Huawei P30 (`ELE-L29`): 103 tests, plus a full journey
-> from app launch through search, results, fare selection, and the booking form.
+> Validated on a physical Huawei P30 (`ELE-L29`): 103 tests, plus a full journey from
+> app launch through search, results, fare selection, and the booking form.
 >
-> Note `AGENTS.md` is inherited from upstream and still designates *that*
-> repository as the canonical source for public Skill code; read it as upstream's
-> policy, not this fork's.
->
-> Deploy locally with `sh deploy.sh` — Claude Code does not discover symlinked
-> skills, so the skill is installed by copy.
+> `AGENTS.md` is inherited from upstream and still designates *that* repository as the
+> canonical source for public Skill code; read it as upstream's policy, not this fork's.
 
 # Competitor Research Skills
 
-**English** | [简体中文](README.zh-CN.md)
-
-> Capture competitor journeys on a real iPhone, then turn the evidence into a clear HTML gallery.
+> Capture competitor journeys on a real Android device, then turn the evidence into a clear HTML gallery.
 
 **Public Beta · v0.2**
 
-This repository contains two installable Codex Skills: `competitor-screenshot-insights` explores apps on a physical device and captures ordered evidence; `build-competitor-report-html` turns screenshot evidence into a neutral, bilingual HTML gallery. Install either Skill independently or use them together as an end-to-end research workflow.
+This repository contains two installable Claude Code Skills: `competitor-screenshot-insights-android` explores apps on a physical Android device and captures ordered evidence; `build-competitor-report-html` turns screenshot evidence into a neutral, bilingual HTML gallery. Install either Skill independently or use them together as an end-to-end research workflow.
 
 It is designed for product managers, designers, researchers, and growth teams working on competitive analysis, experience comparisons, design reviews, opportunity discovery, and strategic reporting.
 
 ## Quick Start
 
-In Codex, ask the Agent to install one or both Skills from GitHub with the built-in `skill-installer`:
+These are Claude Code Skills. Claude Code loads them from `~/.claude/skills/<skill-name>/`,
+and the folder name must match the `name:` in the Skill's frontmatter.
 
-> Install `competitor-screenshot-insights` from `fengjunnan-web/competitor-screenshot-insights`, path `skills/competitor-screenshot-insights`.
+**Option A — ask Claude Code to install from GitHub:**
 
-> Install `build-competitor-report-html` from `fengjunnan-web/competitor-screenshot-insights`, path `skills/build-competitor-report-html`.
+> Install `competitor-screenshot-insights-android` from `denny-putro/competitor-screenshot-insights-android`, path `skills/competitor-screenshot-insights-android`.
+
+> Install `build-competitor-report-html` from `denny-putro/competitor-screenshot-insights-android`, path `skills/build-competitor-report-html`.
+
+**Option B — clone and deploy (keeps this repo as the source of truth):**
+
+```sh
+git clone https://github.com/denny-putro/competitor-screenshot-insights-android.git
+cd competitor-screenshot-insights-android
+sh deploy.sh          # copy the Skill into ~/.claude/skills/
+sh deploy.sh --check   # report drift between repo and installed copy
+```
+
+Do not symlink the Skill into `~/.claude/skills/`: Claude Code does not discover
+symlinked Skills, and the linked Skill is silently absent from the Skill list.
+`deploy.sh` copies instead, and re-records the install fingerprint — which covers
+file paths, so any relocation needs `preflight.sh --record` again.
 
 The report Skill is self-contained: its typography, Hero, navigation, test-criteria, and screenshot-viewer components are bundled as private modules. No additional component Skills are required. It can use evidence from `competitor-screenshot-insights` or screenshots collected elsewhere.
 
-On first use, the Skill runs a local preflight. The Agent reads and follows the [installation guide](skills/competitor-screenshot-insights/INSTALL.md) only when dependencies are missing or the configuration has changed. After a successful setup, it reuses a machine-local cache instead of repeating installation checks on every run.
+On first use, the Skill runs a local preflight. The Agent reads and follows the [installation guide](skills/competitor-screenshot-insights-android/INSTALL.md) only when dependencies are missing or the configuration has changed. After a successful setup, it reuses a machine-local cache instead of repeating installation checks on every run.
 
 Good starting requests include:
 
@@ -58,7 +69,7 @@ Good starting requests include:
 
 ## Fast Screenshot Mode
 
-When you only want to capture the phone’s current screen repeatedly, say `start fast screenshot mode`. The Skill first confirms that the configured iPhone is available over USB, warms the Runner, and binds to the current foreground app. It does not open or switch apps for you.
+When you only want to capture the phone’s current screen repeatedly, say `start fast screenshot mode`. The Skill first confirms that the configured Android device is visible to `adb` over a USB cable, warms the device transport, and binds to the current foreground app. Wired only: an adb-over-network target is rejected. It does not open or switch apps for you.
 
 Once the mode is active, use concise English or Chinese commands:
 
@@ -180,9 +191,9 @@ It also asks for confirmation immediately before placing an order, sending a mes
 
 ## Compatibility and Privacy
 
-The current beta targets macOS, a physical iPhone, a compatible Xcode version, Node.js 22.12+, Agent Device 0.20.x, and Python 3.12+. Some iOS and Xcode combinations may require Runner configuration described in the installation guide.
+This fork targets macOS or Linux, a physical Android device with Developer options and USB debugging enabled, Android platform-tools (`adb`), Node.js 22.12+, Agent Device 0.20.x, and Python 3.12+. No Xcode, Apple Developer account, signing identity, or XCTest Runner is involved. If the device reports `unauthorized`, accept the USB debugging prompt on the phone; that is a permission state, not a transport fault.
 
-Device names, Team IDs, Bundle IDs, machine paths, installation caches, and app mappings learned at runtime remain in the user’s private configuration directory. They are not stored in the Skill or repository. Research screenshots may still contain account or business information, so users should review and redact them before sharing.
+Device names, adb serials, machine paths, installation caches, and app package mappings learned at runtime remain in the user’s private configuration directory. They are not stored in the Skill or repository. Research screenshots may still contain account or business information, so users should review and redact them before sharing.
 
 ## License
 
