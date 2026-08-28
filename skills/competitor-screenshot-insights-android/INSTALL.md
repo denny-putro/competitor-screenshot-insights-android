@@ -71,16 +71,96 @@ Do not install a second SDK when a working `adb` already exists.
 
 ## Prepare the Android device
 
-Verify with the user that:
+The device must expose an authorized adb interface over a USB cable. Walk the user
+through the steps below; every one of them happens on the phone, so none of it can
+be done for them.
 
-- Developer options are enabled;
-- USB debugging is enabled;
-- the device is connected by USB cable and unlocked;
-- the USB debugging authorization prompt for this computer has been accepted.
+### 1. Enable Developer options
 
-If `adb devices` later reports the device as `unauthorized`, stop and ask the user to accept the on-device USB debugging prompt (optionally checking "always allow from this computer"). Do not repeatedly restart the adb server, replug, or reboot for the same authorization error.
+Tap the build number seven times. The path differs by vendor:
 
-Fast capture mode is wired-only by design. An adb-over-network target (`adb connect host:port`) carries no `usb:` transport token and is rejected at activation.
+| Vendor | Path |
+|---|---|
+| Huawei / Honor (EMUI) | **Settings → About phone → Build number** |
+| Samsung (One UI) | **Settings → About phone → Software information → Build number** |
+| Xiaomi (HyperOS / MIUI) | **Settings → About phone → MIUI version** (or **OS version**) |
+| Pixel / stock Android | **Settings → About phone → Build number** |
+| Oppo / realme / vivo | **Settings → About device → Version → Build number** |
+
+A toast confirms "You are now a developer". Some devices ask for the screen lock PIN.
+
+### 2. Enable USB debugging
+
+Open Developer options — usually **Settings → System & updates → Developer options**
+(EMUI), or **Settings → System → Developer options** on stock Android — and turn on
+**USB debugging**.
+
+### 3. Make sure adb is allowed in the current USB mode
+
+This is the step most often missed, and the failure looks like a missing device
+rather than a settings problem. Many devices default the USB connection to
+*charge only*, which blocks adb. Either:
+
+- turn on **Allow ADB debugging in charge only mode** in Developer options, **or**
+- after connecting, pull down the notification shade, tap the USB notification, and
+  choose **Transfer files** / **MTP**.
+
+The toggle is the more durable choice if the device will be used repeatedly.
+
+### 4. Connect the cable
+
+Connect the phone directly to the computer with a USB cable — avoid hubs and
+docks, which are a common cause of a device that authorizes and then drops to
+`offline`. Unlock the phone.
+
+Fast capture mode is wired-only by design. An adb-over-network target
+(`adb connect host:port`) carries no `usb:` transport token and is rejected at
+activation, so wireless debugging cannot substitute for the cable.
+
+### 5. Accept the authorization prompt
+
+A dialog titled **Allow USB debugging?** appears on the phone, showing this
+computer's RSA key fingerprint. Tick **Always allow from this computer**, then
+accept.
+
+If the dialog never appears:
+
+1. turn on **Always prompt when connecting to USB** in Developer options;
+2. set the USB mode to **Transfer files** (see step 3);
+3. unplug and replug the cable.
+
+Only if it still does not appear, use **Revoke USB debugging authorizations** in
+Developer options and replug — that forces a fresh prompt. Do not start with this
+step: it clears every computer the phone has previously trusted.
+
+### 6. Verify
+
+Ask for approval before the first command that reaches the phone, then:
+
+```sh
+adb devices -l
+```
+
+The configured device must appear in state `device` with a `usb:` token, for example:
+
+```
+1A2B3C4D    device usb:337641472X product:raven model:Pixel_6_Pro device:raven
+```
+
+Interpret anything else as follows:
+
+| Reported state | Meaning | Action |
+|---|---|---|
+| `unauthorized` | The prompt in step 5 was not accepted | Ask the user to accept it on the phone. This is a permission state, not a transport fault — do not restart the adb server, replug, or reboot for it |
+| `offline` | Transport wedged, or the device is mid-boot | Reseat the cable; see `references/runner-recovery.md` before escalating |
+| not listed at all | Cable, USB mode, or USB debugging is off | Re-check steps 2–4 |
+| serial looks like `host:port` | This is adb-over-network | Connect by cable; fast mode rejects it |
+| device present but no `usb:` token | Same as above | Connect by cable |
+
+Record the **adb serial**, not the marketing name, for `setup.sh --device`. Model
+tokens are internal codes — a Huawei P30 reports `model:ELE_L29`, so passing
+"Huawei P30" fails the wired-device gate and the error reads as "device not
+visible", which points at the wrong cause.
 
 ## Install the screenshot runtime
 

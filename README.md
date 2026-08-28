@@ -18,9 +18,6 @@
 >
 > Validated on a physical Huawei P30 (`ELE-L29`): 103 tests, plus a full journey from
 > app launch through search, results, fare selection, and the booking form.
->
-> `AGENTS.md` is inherited from upstream and still designates *that* repository as the
-> canonical source for public Skill code; read it as upstream's policy, not this fork's.
 
 # Competitor Research Skills
 
@@ -191,7 +188,7 @@ It also asks for confirmation immediately before placing an order, sending a mes
 
 ## Compatibility and Privacy
 
-This fork targets macOS or Linux, a physical Android device with Developer options and USB debugging enabled, Android platform-tools (`adb`), Node.js 22.12+, Agent Device 0.20.x, and Python 3.12+. No Xcode, Apple Developer account, signing identity, or XCTest Runner is involved. If the device reports `unauthorized`, accept the USB debugging prompt on the phone; that is a permission state, not a transport fault.
+This fork targets macOS or Linux, a physical Android device with Developer options and USB debugging enabled, Android platform-tools (`adb`), Node.js 22.12+, Agent Device 0.20.x, and Python 3.12+. Step-by-step device setup — enabling Developer options per vendor, the charge-only-mode trap that makes a connected phone look absent, and how to read `adb devices -l` states — is in the [installation guide](skills/competitor-screenshot-insights-android/INSTALL.md#prepare-the-android-device). No Xcode, Apple Developer account, signing identity, or XCTest Runner is involved. If the device reports `unauthorized`, accept the USB debugging prompt on the phone; that is a permission state, not a transport fault.
 
 Device names, adb serials, machine paths, installation caches, and app package mappings learned at runtime remain in the user’s private configuration directory. They are not stored in the Skill or repository. Research screenshots may still contain account or business information, so users should review and redact them before sharing.
 
